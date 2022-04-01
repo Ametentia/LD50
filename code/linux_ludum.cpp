@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     Linux_Parameters init_params = {};
     init_params.init_flags   = PlatformInit_OpenWindow | PlatformInit_EnableAudio;
     init_params.window_dim   = V2U(1280, 720);
-    init_params.window_title = WrapConst("LD49");
+    init_params.window_title = WrapConst("LD50");
 
     if (!LinuxInitialise(&init_params)) {
         printf("Failed to initialise\n");
