@@ -30,8 +30,6 @@ struct Game_State {
 		Mode_Menu menu;
 		Mode_Play play;
 	};
-    Player player;
-    Player enemy;
 };
 
 struct Game_Context {
@@ -39,15 +37,4 @@ struct Game_Context {
 
     Game_State *state;
 };
-
-enum aabbSides {
-    noCollision=0,
-    leftSide=1,
-    rightSide=1<<1,
-    topSide=1<<2,
-    bottomSide=1<<3
-};
-
-function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB);
-function void UpdatePlayer(Player *player, int result, Input *input);
 #endif  // LUDUM_H_

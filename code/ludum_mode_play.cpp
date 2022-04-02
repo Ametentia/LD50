@@ -117,3 +117,42 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	   	play->front_wave_count
 	);
 }
+
+function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
+    rect2 a_r;
+    rect2 b_r;
+    a_r.min = posA - (0.5f*dimA);
+    a_r.max = posA + (0.5f*dimA);
+    b_r.min = posB - (0.5f*dimB);
+    b_r.max = posB + (0.5f*dimB);
+
+    v2 overlap;
+    overlap.x =  Min(b_r.max.x, a_r.max.x) - Max(b_r.min.x, a_r.min.x);
+    overlap.y =  Min(b_r.max.y, a_r.max.y) - Max(b_r.min.y, a_r.min.y);
+
+    if(overlap.x >= 0 && overlap.y >= 0){
+        if(overlap.x < overlap.y){
+            if(overlap.x > 0){
+                if(posA.x > posB.x){
+                    return leftSide;
+                }
+                else{
+                    return rightSide;
+                }
+            }
+        }
+        else{
+            if(overlap.x > 0){
+                if(posA.y > posB.y){
+                    return topSide;
+                }
+                else{
+                    return bottomSide;
+                }
+            }
+        }
+    }
+    return noCollision;
+}
+
+
