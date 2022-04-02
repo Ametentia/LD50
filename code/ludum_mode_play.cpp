@@ -230,14 +230,14 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		batch,
 	   	back_texture,
 		V3(0,0.2,0),
-		9,
+		9.3,
 		0
 	);
 	DrawQuad(
 		batch,
 	   	middle_texture,
 		V3(0,0.2,0),
-		9,
+		9.3,
 		0
 	);
 	UpdateRenderEnemyShip(
@@ -256,7 +256,17 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	);
 
 	UpdateAnimation(&(play->anim), input->delta_time);
-	DrawAnimation(batch, &(play->anim), play->player.p, play->player.dim, 0);
+	v2 player_dim = play->player.dim;
+	if(play->player.flags & Player_Flipped) {
+		player_dim.x = -player_dim.x;
+	}
+	DrawAnimation(
+		batch,
+	   	&(play->anim),
+	   	play->player.p,
+		player_dim,
+		0
+	);
 
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
@@ -265,7 +275,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		batch,
 	   	front_texture,
 		V3(0,0.2,0),
-		9,
+		9.3,
 		0
 	);
 	
@@ -316,12 +326,14 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     //
     if (IsPressed(input->keys[Key_A])) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+		player->flags |= Player_Flipped;
     }
 
     // Move right
     //
     if (IsPressed(input->keys[Key_D])) {
         ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
+		player->flags &= !Player_Flipped;
     }
 
     // If neither left or right were pressed apply damping to the player

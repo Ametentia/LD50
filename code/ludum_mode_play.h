@@ -35,7 +35,8 @@ struct Enemy_Ship {
 enum Player_Flags {
     Player_OnGround   = (1 << 0),
     Player_DoubleJump = (1 << 1),
-	Player_Holding	  = (1 << 2)
+	Player_Holding	  = (1 << 2),
+	Player_Flipped	  = (1 << 3)
 };
 
 enum aabbSides {
