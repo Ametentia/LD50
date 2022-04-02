@@ -8,7 +8,7 @@ function void ModePlay(Game_State *state) {
 	play->back_wave_count = 1;
 	play->front_wave_count = 2;
 
-	play->back_waves[0].position = V3(0, 0.6f, -0.3f);
+	play->back_waves[0].position = V3(0, -0.2f, -0.3f);
 	play->back_waves[0].radius = 0.5f;
 	play->back_waves[0].angle = 270;
 	play->back_waves[0].speed = 280;
@@ -18,20 +18,20 @@ function void ModePlay(Game_State *state) {
 	);
 	play->back_waves[0].texture = back_water_texture;
 
-	play->front_waves[0].position = V3(0, 0.1f, 0.15f);
-	play->front_waves[0].radius = 0.4f;
+	play->front_waves[0].position = V3(0, 0.2f, 0.15f);
+	play->front_waves[0].radius = 0.3f;
 	play->front_waves[0].angle = 180;
-	play->front_waves[0].speed = 380;
+	play->front_waves[0].speed = 360;
     Image_Handle front_water_texture1 = GetImageByName(
 		&state->assets,
 	   	"wave_1"
 	);
 	play->front_waves[0].texture = front_water_texture1;
 
-	play->front_waves[1].position = V3(0, 0.2, 0.3f);
-	play->front_waves[1].radius = 0.3f;
+	play->front_waves[1].position = V3(0, 0.1, 0.3f);
+	play->front_waves[1].radius = 0.2f;
 	play->front_waves[1].angle = 0;
-	play->front_waves[1].speed = 360;
+	play->front_waves[1].speed = 380;
     Image_Handle front_water_texture2 = GetImageByName(
 		&state->assets,
 	   	"wave_0"
@@ -58,7 +58,7 @@ function void UpdateRenderWaveList(
 			batch,
 			layer->texture,
 			render_pos,
-			10,
+			12,
 			0
 		);
 	}
@@ -79,6 +79,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		&state->assets,
 	   	"middle_layer"
 	);
+    Image_Handle front_texture = GetImageByName(
+		&state->assets,
+	   	"front_layer"
+	);
 	UpdateRenderWaveList(
 		input->delta_time,
 		batch,
@@ -95,6 +99,13 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(
 		batch,
 	   	middle_texture,
+		V3(0,0,0),
+		9,
+		0
+	);
+	DrawQuad(
+		batch,
+	   	front_texture,
 		V3(0,0,0),
 		9,
 		0
