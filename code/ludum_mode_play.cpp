@@ -1,9 +1,10 @@
 #include "ludum_mode_play.h"
-function void ModePlay(Game_State *state) {
+function void ModePlay(Game_State *state, Input *input) {
     Reset(&state->mode_arena);
 
     Mode_Play *play = AllocType(&state->mode_arena, Mode_Play);
     play->alloc = &state->mode_arena;
+	play->rand = RandomSeed(input->ticks);
 
 	play->back_wave_count = 1;
 	play->front_wave_count = 2;
@@ -38,8 +39,128 @@ function void ModePlay(Game_State *state) {
 	);
 	play->front_waves[1].texture = front_water_texture2;
 
+    Image_Handle shipTexture = GetImageByName(
+		&state->assets,
+	   	"badship"
+	);
+    Image_Handle enemy_border = GetImageByName(
+		&state->assets,
+	   	"enemy_border"
+	);
+	play->enemy_spawn_time = 12;
+	play->enemies[0].health = 0;
+	play->enemies[0].fire_interval = 10.0;
+	play->enemies[0].time_since_shot = 0;
+	play->enemies[0].width = 0;
+	play->enemies[0].border = enemy_border;
+	Initialise(
+		&(play->enemies[0].anim), 
+		shipTexture,
+		1,
+		2,
+		0.7f
+	);
+
+	play->enemies[1].health = 0;
+	play->enemies[1].fire_interval = 10.0;
+	play->enemies[1].time_since_shot = 0;
+	play->enemies[1].width = 0;
+	play->enemies[1].border = enemy_border;
+	Initialise(
+		&(play->enemies[1].anim), 
+		shipTexture,
+		1,
+		2,
+		0.7f
+	);
+    Image_Handle skipper = GetImageByName(
+		&state->assets,
+	   	"skipper_walking"
+	);
+	Initialise(
+		&(play->anim), 
+		skipper,
+		1,
+		8,
+		1.0f/12
+	);
+
     state->game_mode = GameMode_Play;
     state->play = *play;
+}
+
+function void UpdateShipHoles(
+	f64 dt,
+	Draw_Batch *batch,
+	Ship_Hole *ship_holes
+) {
+
+}
+
+function void UpdateRenderEnemyShip(
+	f64 dt,
+	Draw_Batch *batch,
+	Mode_Play *play
+) {
+	b32 all_alive = 1;
+	for(u8 i = 0; i < 2; i++) {
+		Enemy_Ship *enemy = &(play->enemies[i]);
+		if(play->time_since_enemy > play->enemy_spawn_time && enemy->health <= 0) {
+			play->time_since_enemy = 0;
+			enemy->health = 3;
+			play->enemy_spawn_time = RandomF32(&(play->rand), 20, 35);
+			printf("Next spawn in %f\n", play->enemy_spawn_time);
+		}
+		if(enemy->health <= 0) {
+			all_alive = 0;
+			continue;
+		}
+		enemy->time_since_shot += dt;
+		enemy->width += 5*dt;
+		v3 pos = V3(-2.4, -1.2, 0.8);
+		v2 scale = V2(Min(enemy->width, 1.8f), Min(enemy->width, 1.8f));
+		if(i%2) {
+			pos.x = -pos.x;
+			scale.x = -scale.x;
+		}
+		UpdateAnimation(&(enemy->anim), dt);
+		DrawQuad(
+			batch,
+			enemy->border,
+			pos,
+			scale,
+			0
+		);
+		DrawAnimation(
+			batch, 
+			&(enemy->anim),
+			pos,
+			scale,
+			0
+		);
+		if(enemy->time_since_shot > enemy->fire_interval) {
+			enemy->fire_interval = RandomF32(&(play->rand), 9, 15);
+			enemy->time_since_shot = 0;
+			printf("Bang %d %f!\n", i, enemy->fire_interval);
+			/*
+			// Upper deck Left
+			DrawQuad(batch, {0}, V3(-2.1,0.5,3), V2(0.3, 0.5), 0);
+			// Upper deck right
+			DrawQuad(batch, {0}, V3(2.3,0.5,3), V2(0.3, 0.5), 0);
+			// mid deck Left
+			DrawQuad(batch, {0}, V3(-2.1,1.1,3), V2(0.3, 0.5), 0);
+			// mid deck right
+			DrawQuad(batch, {0}, V3(2.1,1.1,3), V2(0.3, 0.5), 0);
+			// bottom deck Left
+			DrawQuad(batch, {0}, V3(-1.9,1.63,3), V2(0.3, 0.5), 0);
+			// bottom deck right
+			DrawQuad(batch, {0}, V3(1.7,1.63,3), V2(0.3, 0.5), 0);
+			*/
+		}
+	}
+	if(!all_alive) {
+		play->time_since_enemy += dt;
+	}
 }
 
 function void UpdateRenderWaveList(
@@ -92,16 +213,21 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(
 		batch,
 	   	back_texture,
-		V3(0,0,0),
+		V3(0,0.2,0),
 		9,
 		0
 	);
 	DrawQuad(
 		batch,
 	   	middle_texture,
-		V3(0,0,0),
+		V3(0,0.2,0),
 		9,
 		0
+	);
+	UpdateRenderEnemyShip(
+		input->delta_time,
+		batch,
+		play
 	);
 
     SetRenderTarget(batch, RenderTarget_Masked);
@@ -110,7 +236,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(
 		batch,
 	   	front_texture,
-		V3(0,0,0),
+		V3(0,0.2,0),
 		9,
 		0
 	);
@@ -120,6 +246,20 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	   	play->front_waves,
 	   	play->front_wave_count
 	);
+	UpdateAnimation(&(play->anim), input->delta_time);
+	DrawAnimation(batch, &(play->anim), V3(0,0.055,3), V2(0.2,0.2), 0);
+	// Upper deck Left
+	DrawQuad(batch, {0}, V3(-2.1,0.5,3), V2(0.3, 0.5), 0);
+	// Upper deck right
+	DrawQuad(batch, {0}, V3(2.3,0.5,3), V2(0.3, 0.5), 0);
+	// mid deck Left
+	DrawQuad(batch, {0}, V3(-2.1,1.1,3), V2(0.3, 0.5), 0);
+	// mid deck right
+	DrawQuad(batch, {0}, V3(2.1,1.1,3), V2(0.3, 0.5), 0);
+	// bottom deck Left
+	DrawQuad(batch, {0}, V3(-1.9,1.63,3), V2(0.3, 0.5), 0);
+	// bottom deck right
+	DrawQuad(batch, {0}, V3(1.7,1.63,3), V2(0.3, 0.5), 0);
 
     v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
 
