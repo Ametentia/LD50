@@ -16,6 +16,6 @@ LINKER_FLAGS="-ldl -lpthread -lSDL2"
 
 # Debug build
 #
-g++ -O0 -g -ggdb $COMPILER_FLAGS "../code/linux_ludum.cpp" -o "ludum.bin" $LINKER_FLAGS
+g++ -O0 -g -ggdb -DLUDAM_INTERNAL=1 $COMPILER_FLAGS "../code/linux_ludum.cpp" -o "ludum.bin" $LINKER_FLAGS
 
 popd > /dev/null

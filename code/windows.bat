@@ -14,7 +14,7 @@ call ..\base\renderer\windows_wgl.bat debug
 
 REM Debug build
 REM
-cl %COMPILER_FLAGS% -Od -Zi "..\code\windows_ludum.cpp" -Fe"ludum_debug.exe" -link %LINKER_FLAGS%
+cl %COMPILER_FLAGS% -DLUDAM_INTERNAL=1 -Od -Zi "..\code\windows_ludum.cpp" -Fe"ludum_debug.exe" -link %LINKER_FLAGS%
 
 popd > NUL
 

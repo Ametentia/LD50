@@ -73,6 +73,8 @@ int WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR args, int show_cm
         WindowsSubmitAudioBuffer(&audio_buffer);
     }
 
+    renderer->Shutdown(renderer);
+
     return 0;
 }
 
