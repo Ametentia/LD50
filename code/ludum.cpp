@@ -1,6 +1,7 @@
 #include <base.cpp>
 #include "ludum_mode_menu.cpp"
 #include "ludum_mode_splash.cpp"
+#include "ludum_mode_play.cpp"
 
 function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Buffer *renderer_buffer) {
     input->delta_time = Clamp(input->delta_time, 0.0, 0.2); // @Hack: Should probably be handled by the platform
@@ -22,11 +23,13 @@ function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Bu
     Draw_Batch *batch = &_batch;
 	if(state->game_mode == GameMode_None) {
 		ModeSplash(state, input);
+		// TEMP: Remove before release
+		ModePlay(state);
 	}
 
     Initialise(batch, &state->assets, renderer_buffer);
 
-    DrawClear(batch, V4(1, 0, 1, 1));
+    DrawClear(batch, V4(0, 0, 0, 1));
 	switch(state->game_mode){
 		case GameMode_Splash: {
 			UpdateRenderModeSplash(state, input, renderer_buffer);
@@ -34,6 +37,10 @@ function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Bu
 		}
 		case GameMode_Menu: {
 			UpdateRenderModeMenu(state, input, renderer_buffer);
+			break;
+		}
+		case GameMode_Play: {
+			UpdateRenderModePlay(state, input, renderer_buffer);
 			break;
 		}
 	}
