@@ -39,7 +39,7 @@ function void ModePlay(Game_State *state, Input *input) {
 	);
 	play->front_waves[1].texture = front_water_texture2;
 	play->player.p = V2(0,-0.4);
-	play->player.dim = V2(0.5,0.5);
+	play->player.dim = V2(0.2,0.2);
 
     Image_Handle shipTexture = GetImageByName(
 		&state->assets,
@@ -194,6 +194,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Initialise(batch, &state->assets, renderer_buffer);
     SetCameraTransform(batch, 0, V3(1, 0, 0), V3(0, 1, 0), V3(0, 0, 1), V3(0, 0, 15));
     DrawClear(batch, V4(0, 1, 1, 1));
+    Image_Handle background = GetImageByName(
+		&state->assets,
+	   	"background"
+	);
     Image_Handle back_texture = GetImageByName(
 		&state->assets,
 	   	"back_layer"
@@ -209,6 +213,13 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	
 	
 	UpdatePlayer(play, &(play->player), input, state);
+	DrawQuad(
+		batch,
+	   	background,
+		V3(0,0,-0.5),
+		9.6,
+		0
+	);
 	UpdateRenderWaveList(
 		input->delta_time,
 		batch,
@@ -243,14 +254,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		0,
 		V4(0,0,1,1)
 	);
-	DrawQuad(
-		batch,
-		{0},
-		play->player.p,
-		play->player.dim,
-		0,
-		V4(1,1,1,1)
-	);
+
+	UpdateAnimation(&(play->anim), input->delta_time);
+	DrawAnimation(batch, &(play->anim), play->player.p, play->player.dim, 0);
 
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
@@ -269,8 +275,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	   	play->front_waves,
 	   	play->front_wave_count
 	);
-	UpdateAnimation(&(play->anim), input->delta_time);
-	DrawAnimation(batch, &(play->anim), V3(0,0.055,3), V2(0.2,0.2), 0);
 	// Upper deck Left
 	DrawQuad(batch, {0}, V3(-2.1,0.5,3), V2(0.3, 0.5), 0);
 	// Upper deck right
@@ -383,7 +387,6 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 	if(result&bottomSide){
 		player->dp.y=0;
 	}
-
 }
 
 function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
