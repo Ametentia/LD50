@@ -17,4 +17,14 @@ struct Mode_Play {
 	Wave_Layer front_waves[3];
 };
 
+enum aabbSides {
+    noCollision=0,
+    leftSide=1,
+    rightSide=1<<1,
+    topSide=1<<2,
+    bottomSide=1<<3
+};
+
+function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB);
+
 #endif  // PLAY_H_
