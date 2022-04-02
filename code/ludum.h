@@ -13,11 +13,6 @@ enum Game_Mode {
 	GameMode_Play
 };
 
-struct Player {
-    v2 p;
-    v2 dim;
-};
-
 struct Game_State {
     Memory_Arena perm_arena;
     Memory_Arena mode_arena;

@@ -38,6 +38,8 @@ function void ModePlay(Game_State *state, Input *input) {
 	   	"wave_0"
 	);
 	play->front_waves[1].texture = front_water_texture2;
+	play->player.p = V2(0,-0.4);
+	play->player.dim = V2(0.5,0.5);
 
     Image_Handle shipTexture = GetImageByName(
 		&state->assets,
@@ -204,6 +206,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		&state->assets,
 	   	"front_layer"
 	);
+	
+	
+	UpdatePlayer(play, &(play->player), input, state);
 	UpdateRenderWaveList(
 		input->delta_time,
 		batch,
@@ -230,6 +235,23 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		play
 	);
 
+	DrawQuad(
+		batch,
+		{0},
+		V2(0,0.4),
+		V2(8,0.2),
+		0,
+		V4(0,0,1,1)
+	);
+	DrawQuad(
+		batch,
+		{0},
+		play->player.p,
+		play->player.dim,
+		0,
+		V4(1,1,1,1)
+	);
+
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
 
@@ -240,6 +262,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		9,
 		0
 	);
+	
 	UpdateRenderWaveList(
 		input->delta_time,
 		batch,
@@ -269,6 +292,98 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     DrawCircle(batch, { 0 }, mp.xy, 0.95);
 
     ResolveMasks(batch, false);
+}
+
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_State *state){
+	f32 delta_time = input->delta_time;
+	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
+    v2 ddp = V2(0, gravity);
+	b32 on_ground = (player->flags&Player_OnGround);
+
+    // Attempt to jump. We will buffer this for an amount of time so if the player presses jump
+    // slightly before hitting the ground it will still count
+    //
+    if (JustPressed(input->keys[Key_Space])) {
+        player->last_jump_time = input->time;
+		on_ground = 0;
+    }
+
+    // Move left
+    //
+    if (IsPressed(input->keys[Key_A])) {
+        ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+    }
+
+    // Move right
+    //
+    if (IsPressed(input->keys[Key_D])) {
+        ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
+    }
+
+    // If neither left or right were pressed apply damping to the player
+    //
+    if (IsZero(ddp.x)) {
+        player->dp.x     *= (1.0f / (1 + (PLAYER_DAMPING * delta_time)));
+    }
+
+    if ((input->time - player->last_jump_time) <= PLAYER_JUMP_BUFFER_TIME) {
+        b32 double_jump = (player->flags & Player_DoubleJump);
+
+        if (on_ground || double_jump) {
+            if (double_jump) {
+                gravity = (2 * PLAYER_MAX_DOUBLE_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
+
+                player->dp.y   = -Sqrt(2 * gravity * PLAYER_MAX_DOUBLE_JUMP_HEIGHT);
+                player->flags &= ~Player_DoubleJump;
+            }
+            else {
+                player->dp.y   = -Sqrt(2 * gravity * PLAYER_MAX_JUMP_HEIGHT);
+                player->flags |= Player_DoubleJump;
+            }
+
+            player->flags &= ~Player_OnGround;
+            player->last_jump_time = 0;
+        }
+    }
+
+    if (!IsPressed(input->keys[Key_Space]) && (player->dp.y < 0)) {
+        f32 initial_dp_sq = (2 * gravity * PLAYER_MAX_JUMP_HEIGHT);
+        f32 limit_dp_sq   = (2 * gravity * (PLAYER_MAX_JUMP_HEIGHT - PLAYER_MIN_JUMP_HEIGHT));
+
+        f32 term_dp = -Sqrt(initial_dp_sq - limit_dp_sq);
+        if (player->dp.y < term_dp) {
+            player->dp.y = term_dp;
+        }
+    }
+
+    // Limit x speed
+    //
+    if (Abs(player->dp.x) > PLAYER_MAX_SPEED_X) {
+        player->dp.x *= (PLAYER_MAX_SPEED_X / Abs(player->dp.x));
+    }
+
+    // Limit y only in downward direction to prevent jumps from being cut short
+    //
+    if (player->dp.y > PLAYER_MAX_SPEED_Y) {
+        player->dp.y *= (PLAYER_MAX_SPEED_Y / player->dp.y);
+    }
+
+    player->p  += (player->dp * delta_time);
+    player->dp += (ddp * delta_time);
+	
+	int result = AABB(player->p, player->dim,V2(0,0.4),V2(8,0.2));
+	switch(result){
+		case bottomSide:
+			player->p.y= 0.4-((player->dim.y)/2 + 0.1);
+			player->flags|=Player_OnGround;
+			break;
+		default:
+		break;
+	}
+	if(result&bottomSide){
+		player->dp.y=0;
+	}
+
 }
 
 function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
