@@ -103,6 +103,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		9,
 		0
 	);
+
+    SetRenderTarget(batch, RenderTarget_Masked);
+    DrawClear(batch, V4(0, 0, 0, 0));
+
 	DrawQuad(
 		batch,
 	   	front_texture,
@@ -116,6 +120,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	   	play->front_waves,
 	   	play->front_wave_count
 	);
+
+    v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
+
+    SetRenderTarget(batch, RenderTarget_Mask);
+    DrawClear(batch, V4(0, 0, 0, 0));
+
+    DrawCircle(batch, { 0 }, mp.xy, 0.95);
+
+    ResolveMasks(batch, false);
 }
 
 function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
