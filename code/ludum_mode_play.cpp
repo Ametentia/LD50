@@ -18,7 +18,7 @@ function void ModePlay(Game_State *state) {
 	);
 	play->back_waves[0].texture = back_water_texture;
 
-	play->front_waves[0].position = V3(0, 0.2f, 0.15f);
+	play->front_waves[0].position = V3(0, -0.1f, 0.15f);
 	play->front_waves[0].radius = 0.3f;
 	play->front_waves[0].angle = 180;
 	play->front_waves[0].speed = 360;
@@ -28,7 +28,7 @@ function void ModePlay(Game_State *state) {
 	);
 	play->front_waves[0].texture = front_water_texture1;
 
-	play->front_waves[1].position = V3(0, 0.1, 0.3f);
+	play->front_waves[1].position = V3(0, 0, 0.3f);
 	play->front_waves[1].radius = 0.2f;
 	play->front_waves[1].angle = 0;
 	play->front_waves[1].speed = 380;
