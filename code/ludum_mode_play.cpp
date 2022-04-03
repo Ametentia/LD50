@@ -555,22 +555,22 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
 					player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2);
 					player->flags|=Player_OnGround;
-					player->dp.y=0;
+					player->dp.y = 0;
 					break;
 				case (AABB_Sides_leftSide):
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
 					player->p.x = play->hitboxes[i].pos.x + (play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
-					player->dp.x=0;
+					player->dp.x = 0;
 					break;
 				case (AABB_Sides_rightSide):
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
 					player->p.x = play->hitboxes[i].pos.x - (play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
-					player->dp.x=0;
+					player->dp.x = 0;
 					break;
 				case (AABB_Sides_topSide):
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
-					player->p.x = -(play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
-					player->dp.y=0;
+					player->p.y =  play->hitboxes[i].pos.y + (play->hitboxes[i].dim.y/2 + player->dim.y/2) ;
+					player->dp.y = 1;
 					break;
 				default:
 					break;
