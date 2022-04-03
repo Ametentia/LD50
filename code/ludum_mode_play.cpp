@@ -373,7 +373,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		0
 	);
 	for(u32 i = 0; i < play->hitbox_count; i++){
-		continue;
 		DrawQuad(
 			batch,
 			{0},
@@ -558,9 +557,20 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 					player->flags|=Player_OnGround;
 					player->dp.y=0;
 					break;
-				case(AABB_Sides_leftSide):
+				case (AABB_Sides_leftSide):
+					play->hitboxes[i].debugColour = V4(0,1,0,1);
+					player->p.x = play->hitboxes[i].pos.x + (play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
+					player->dp.x=0;
 					break;
-				case(AABB_Sides_rightSide):
+				case (AABB_Sides_rightSide):
+					play->hitboxes[i].debugColour = V4(0,1,0,1);
+					player->p.x = play->hitboxes[i].pos.x - (play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
+					player->dp.x=0;
+					break;
+				case (AABB_Sides_topSide):
+					play->hitboxes[i].debugColour = V4(0,1,0,1);
+					player->p.x = -(play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
+					player->dp.y=0;
 					break;
 				default:
 					break;
