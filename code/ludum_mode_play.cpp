@@ -49,7 +49,7 @@ function void ModePlay(Game_State *state, Input *input) {
 		&state->assets,
 	   	"enemy_border"
 	);
-	play->enemy_spawn_time = 1;
+	play->enemy_spawn_time = 10;
 	play->enemies[0].health = 0;
 	play->enemies[0].fire_interval = 10.0;
 	play->enemies[0].time_since_shot = 0;
@@ -96,7 +96,65 @@ function void UpdateShipHoles(
 	Draw_Batch *batch,
 	Ship_Hole *ship_holes
 ) {
+}
 
+function void UpdateRenderClouds(
+	f64 dt,
+	Draw_Batch *batch,
+	Game_State *state
+) {
+	Mode_Play *play = &(state->play);
+	play->cloud_timer += dt;
+	if(play->cloud_timer > CLOUD_SLIDE_TIME) {
+		play->cloud_timer = 0;
+	}
+	f32 depth = -0.4;
+	for(s32 i = CLOUD_COUNT-1; i > -1; i--) {
+		char tags[10][9] = {
+			"clouds_0",
+			"clouds_1",
+			"clouds_2",
+			"clouds_3",
+			"clouds_4",
+			"clouds_5",
+			"clouds_6",
+			"clouds_7",
+			"clouds_8",
+			"clouds_9"
+		};
+		Image_Handle cloud = GetImageByName(
+			&state->assets,
+			tags[i]
+		);
+		f32 mod = 1;
+		if(i % 2) {
+			mod = -1;
+		}
+		f32 offset = play->cloud_timer + (CLOUD_SLIDE_TIME/CLOUD_COUNT)*i;
+		if(offset > CLOUD_SLIDE_TIME) {
+			 offset -= CLOUD_SLIDE_TIME;
+		}
+		DrawQuad(
+			batch,
+			cloud,
+			V3(
+				mod*Lerp(0, 9.6f, offset/CLOUD_SLIDE_TIME),
+				(9.6/(CLOUD_COUNT*2))*i,
+			   	-0.4
+			),
+			9.6
+		);
+		DrawQuad(
+			batch,
+			cloud,
+			V3(
+				mod*Lerp(-9.6f, 0, offset/CLOUD_SLIDE_TIME),
+				(9.6/(CLOUD_COUNT*2))*i,
+			   	-0.4
+			),
+			9.6
+		);
+	}
 }
 
 function void UpdateRenderEnemyShip(
@@ -143,14 +201,12 @@ function void UpdateRenderEnemyShip(
 		if(enemy->time_since_shot > enemy->fire_interval) {
 			enemy->fire_interval = RandomF32(&(play->rand), 9, 15);
 			enemy->time_since_shot = 0;
-			printf("Bang %d %f!\n", i, enemy->fire_interval);
 			if(play->ship_hole_count < MAX_SHIP_HOLES) {
 				Ship_Layer ship_layer = (Ship_Layer)RandomU32(
 					&(play->rand),
 					Deck_Bottom,
 					Deck_Upper+1
 				);
-				printf("I hit %d\n", ship_layer);
 				v2 hitbox_dim = V2(0.3, 0.5);
 				f32 hitbox_x;
 				f32 hitbox_y;
@@ -243,6 +299,11 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		V3(0,0,-0.5),
 		9.6,
 		0
+	);
+	UpdateRenderClouds(
+		input->delta_time,
+		batch,
+		state
 	);
 	UpdateRenderWaveList(
 		input->delta_time,

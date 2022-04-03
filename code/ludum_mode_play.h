@@ -9,6 +9,8 @@
 //
 #define PLAYER_JUMP_APEX_TIME   (0.15f)
 #define PLAYER_JUMP_BUFFER_TIME (0.2f)
+
+#define CLOUD_SLIDE_TIME (10.0f)
 // Movement
 //
 #define PLAYER_MOVE_SPEED (8)
@@ -20,6 +22,7 @@
 // In elementry units
 //
 #define MAX_SHIP_HOLES (10)
+#define CLOUD_COUNT (10)
 
 enum Ship_Layer {
     Deck_Bottom = 0,
@@ -106,6 +109,7 @@ struct Mode_Play {
 	f32 water_level;
 	Sprite_Animation anim;
 	Player player;
+	f32 cloud_timer;
 };
 
 function int ResolveCollision(v2 posA, v2 dimA, AABB collidable);
