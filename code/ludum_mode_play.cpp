@@ -89,27 +89,27 @@ function void ModePlay(Game_State *state, Input *input) {
 
 	play->hitboxes[0].pos = V2(0,0.5);
 	play->hitboxes[0].dim = V2(5, 0.4);
-	play->hitboxes[0].flags = Normal;
+	play->hitboxes[0].flags = Collision_Type_Normal;
 	play->hitboxes[0].debugColour = V4(1,0,0,1);
 
 	play->hitboxes[1].pos = V2(-2,0);
 	play->hitboxes[1].dim = V2(0.4, 2);
-	play->hitboxes[1].flags = Ladder;
+	play->hitboxes[1].flags = Collision_Type_Ladder;
 	play->hitboxes[1].debugColour = V4(1,0,0,1);
 	
 	play->hitboxes[2].pos = V2(2,0);
 	play->hitboxes[2].dim = V2(0.3, 0);
-	play->hitboxes[2].flags = Trap_Door;
+	play->hitboxes[2].flags = Collision_Type_Trap_Door;
 	play->hitboxes[2].debugColour = V4(1,0,0,1);
 	
 	play->hitboxes[3].pos = V2(4,-0.4);
 	play->hitboxes[3].dim = V2(0.8, 0.8);
-	play->hitboxes[3].flags = Cannon;
+	play->hitboxes[3].flags = Collision_Type_Cannon;
 	play->hitboxes[3].debugColour = V4(1,0,0,1);
 	
 	play->hitboxes[4].pos = V2(-1,-0.4);
 	play->hitboxes[4].dim = V2(0.1, 0.8);
-	play->hitboxes[4].flags = Cannon_Hole;
+	play->hitboxes[4].flags = Collision_Type_Cannon_Hole;
 	play->hitboxes[4].debugColour = V4(1,0,0,1);
 	
 
@@ -308,15 +308,16 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		player_dim,
 		0
 	);
-
-	DrawQuad(
-		batch,
-		{0},
-		play->hitboxes[0].pos,
-		play->hitboxes[0].dim,
-		0,
-		play->hitboxes[0].debugColour
-	);
+	for(u32 i = 0; i < MAX_HITBOXES; i++){
+		DrawQuad(
+			batch,
+			{0},
+			play->hitboxes[i].pos,
+			play->hitboxes[i].dim,
+			0,
+			play->hitboxes[i].debugColour
+		);
+	}
 
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
@@ -439,19 +440,20 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
 	
-	u32 collisions = 0;
-	for(u32 i = 0; i < 1; i++){
-		collisions |= ResolveCollision(player->p, player->dim, &(play->hitboxes[i]));
-		switch(collisions){
-			case bottomSide|collision:
-				player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2) ;
-				player->flags|=Player_OnGround;
-				break;
-			default:
-			break;
-		}
-		if(collisions&bottomSide){
-			player->dp.y=0;
+	for(u32 i = 0; i < MAX_HITBOXES; i++){
+		u32 result = ResolveCollision(player->p, player->dim, &(play->hitboxes[i]));
+		u32 no_col_flag = result > 0 ? result-AABB_Sides_collision : result;
+		if(play->hitboxes[i].flags==Collision_Type_Normal || play->hitboxes[i].flags==Collision_Type_Trap_Door){
+			switch(no_col_flag){
+				case (AABB_Sides_bottomSide):
+					play->hitboxes[i].debugColour = V4(0,1,0,1);
+					player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2) ;
+					player->flags|=Player_OnGround;
+					player->dp.y=0;
+					break;
+				default:
+					break;
+			}
 		}
 	}
 }
@@ -467,36 +469,30 @@ function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable){
     v2 overlap;
     overlap.x =  Min(b_r.max.x, a_r.max.x) - Max(b_r.min.x, a_r.min.x);
     overlap.y =  Min(b_r.max.y, a_r.max.y) - Max(b_r.min.y, a_r.min.y);
-
     if(overlap.x >= 0 && overlap.y >= 0){
         if(overlap.x < overlap.y){
             if(overlap.x > 0){
                 if(posA.x > collidable->pos.x){
-                    return collision|leftSide;
+                    return AABB_Sides_collision|AABB_Sides_leftSide;
                 }
                 else{
-                    return collision|rightSide;
+                    return AABB_Sides_collision|AABB_Sides_rightSide;
                 }
             }
         }
         else{
             if(overlap.x > 0){
                 if(posA.y > collidable->pos.y){
-                    return collision|topSide;
+                    return AABB_Sides_collision|AABB_Sides_topSide;
                 }
                 else{
-                    return collision|bottomSide;
+                    return AABB_Sides_collision|AABB_Sides_bottomSide;
                 }
             }
         }
     }
-	if(collision){
-		collidable->debugColour = V4(0,1,0,1);
-	}
-	else{
-		collidable->debugColour = V4(1,0,0,1);
-	}
-    return noCollision;
+	collidable->debugColour = V4(1,0,0,1);
+    return AABB_Sides_noCollision;
 }
 
 
