@@ -57,7 +57,7 @@ enum Player_Flags {
 
 enum AABB_Sides {
     AABB_Sides_noCollision = 0,
-	AABB_Sides_collision = 1,
+	AABB_Sides_collision = (1 << 0),
     AABB_Sides_leftSide = (1 << 1),
     AABB_Sides_rightSide = (1 << 2),
     AABB_Sides_topSide = (1 << 3),
@@ -65,12 +65,12 @@ enum AABB_Sides {
 };
 
 enum Collision_Type{
-	Collision_Type_Normal = 0,
-	Collision_Type_Ladder = 1,
-	Collision_Type_Trap_Door = (1 << 1),
-	Collision_Type_Cannon = (1 << 2),
-	Collision_Type_Cannon_Hole = (1 << 3),
-	Collision_Type_Tentacles = (1 << 4)
+	Collision_Type_Normal = (1 << 0),
+	Collision_Type_Ladder = (1 << 1),
+	Collision_Type_Trap_Door = (1 << 2),
+	Collision_Type_Cannon = (1 << 3),
+	Collision_Type_Cannon_Hole = (1 << 4),
+	Collision_Type_Tentacles = (1 << 5)
 };
 
 struct AABB{

@@ -425,7 +425,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     //
     if (IsPressed(input->keys[Key_D])) {
         ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
-		player->flags &= !Player_Flipped;
+		player->flags &= ~Player_Flipped;
     }
 
     // If neither left or right were pressed apply damping to the player
@@ -479,16 +479,20 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
 	
-	for(u32 i = 0; i < MAX_HITBOXES; i++){
+	for(u32 i = 0; i < play->hitbox_count; i++){
 		u32 result = ResolveCollision(player->p, player->dim, &(play->hitboxes[i]));
-		u32 no_col_flag = result > 0 ? result-AABB_Sides_collision : result;
-		if(play->hitboxes[i].flags==Collision_Type_Normal || play->hitboxes[i].flags==Collision_Type_Trap_Door){
+		u32 no_col_flag = result & ~AABB_Sides_collision;
+		if(play->hitboxes[i].flags & (Collision_Type_Normal | Collision_Type_Trap_Door)){
 			switch(no_col_flag){
-				case (AABB_Sides_bottomSide):
+				case(AABB_Sides_bottomSide):
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
-					player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2) ;
+					player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2);
 					player->flags|=Player_OnGround;
 					player->dp.y=0;
+					break;
+				case(AABB_Sides_leftSide):
+					break;
+				case(AABB_Sides_rightSide):
 					break;
 				default:
 					break;
@@ -533,5 +537,3 @@ function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable){
 	collidable->debugColour = V4(1,0,0,1);
     return AABB_Sides_noCollision;
 }
-
-
