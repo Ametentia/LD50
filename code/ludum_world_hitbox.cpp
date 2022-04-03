@@ -141,17 +141,24 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);
-	// Right wall
+	// Right wall top
+	AddHitBox(
+		play,
+	 	V2(3.4, 1),
+		V2(0.2, 1.5),
+		Collision_Type_Normal
+	);
+	// Right wall mid
 	AddHitBox(
 		play,
 	 	V2(3.1, 1.7),
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);
-	// Right wall
+	// Right wall bottom
 	AddHitBox(
 		play,
-	 	V2(2.3, 2.2),
+	 	V2(2.3, 2.4),
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);

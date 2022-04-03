@@ -50,7 +50,7 @@ function void ModePlay(Game_State *state, Input *input) {
 		&state->assets,
 	   	"enemy_border"
 	);
-	play->enemy_spawn_time = 100;
+	play->enemy_spawn_time = 5;
 	play->enemies[0].health = 0;
 	play->enemies[0].fire_interval = 10.0;
 	play->enemies[0].time_since_shot = 0;
@@ -252,7 +252,7 @@ function void UpdateRenderEnemyShip(
 					}
 				}
 				// lol hanging pointer funi
-				hole->position = V3(hitbox_x, hitbox_y, 3);
+				hole->position = V3(hitbox_x, hitbox_y, 0.001);
 				hole->hitbox_dim = hitbox_dim;
 				hole->active = true;
 				play->ship_hole_count++;
@@ -423,6 +423,23 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		9.3,
 		0
 	);
+	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		Ship_Hole hole = play->ship_holes[i];
+		if(!hole.active) {
+			continue;
+		}
+		Image_Handle hole_handle = GetImageByName(
+			&state->assets,
+			"hole"
+		);
+		DrawQuad(
+			batch,
+		   	hole_handle,
+		   	hole.position,
+		   	0.5,
+			0
+		);
+	}
 		
 	UpdateRenderWaveList(
 		input->delta_time,
@@ -430,19 +447,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	   	play->front_waves,
 	   	play->front_wave_count
 	);
-	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
-		Ship_Hole hole = play->ship_holes[i];
-		if(!hole.active) {
-			continue;
-		}
-		DrawQuad(
-			batch,
-		   	{0},
-		   	hole.position,
-		   	hole.hitbox_dim,
-			0
-		);
-	}
 
     //v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
 	v3 mp = V3(play->player.p.x, play->player.p.y, 0);
@@ -557,11 +561,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->dp += (ddp * delta_time);
 	b32 anyLadder = 0;
 	for(u32 i = 0; i < play->hitbox_count; i++){
-		AABB *hitbox = &(play->hitboxes[i]);
+		AABB *hitbox = play->hitboxes + i;
 		u32 result = ResolveCollision(player->p, player->dim, hitbox);
-		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door))
+		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door)) {
 			hitbox->flags &= ~Collision_Type_Was_On_Ladder;
+		}
 		u32 colliding = result & AABB_Sides_collision;
+
 		u32 no_col_flag = result & ~AABB_Sides_collision;
 		if(hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)){
 			if(hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
