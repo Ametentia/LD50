@@ -310,7 +310,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		&state->assets,
 	   	"front_layer"
 	);
-	
+	Image_Handle ladder_texture = GetImageByName(
+		&state->assets,
+		"ladder"
+	);
 	
 	UpdatePlayer(play, &(play->player), input, state);
 	DrawQuad(
@@ -345,6 +348,29 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		9.3,
 		0
 	);
+
+	DrawQuad(
+		batch,
+		ladder_texture,
+		play->hitboxes[3].pos,
+		V2(0.3,1),
+		0
+	);
+	DrawQuad(
+		batch,
+		ladder_texture,
+		play->hitboxes[11].pos,
+		V2(0.3,1),
+		0
+	);
+	DrawQuad(
+		batch,
+		ladder_texture,
+		play->hitboxes[15].pos,
+		V2(0.3,1),
+		0
+	);
+
 	UpdateRenderEnemyShip(
 		input->delta_time,
 		batch,
