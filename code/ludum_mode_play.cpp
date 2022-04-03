@@ -1,4 +1,5 @@
 #include "ludum_mode_play.h"
+#include "ludum_world_hitbox.cpp"
 function void ModePlay(Game_State *state, Input *input) {
     Reset(&state->mode_arena);
 
@@ -86,32 +87,7 @@ function void ModePlay(Game_State *state, Input *input) {
 		8,
 		1.0f/12
 	);
-
-	play->hitboxes[0].pos = V2(0,0.5);
-	play->hitboxes[0].dim = V2(5, 0.4);
-	play->hitboxes[0].flags = Normal;
-	play->hitboxes[0].debugColour = V4(1,0,0,1);
-
-	play->hitboxes[1].pos = V2(-2,0);
-	play->hitboxes[1].dim = V2(0.4, 2);
-	play->hitboxes[1].flags = Ladder;
-	play->hitboxes[1].debugColour = V4(1,0,0,1);
-	
-	play->hitboxes[2].pos = V2(2,0);
-	play->hitboxes[2].dim = V2(0.3, 0);
-	play->hitboxes[2].flags = Trap_Door;
-	play->hitboxes[2].debugColour = V4(1,0,0,1);
-	
-	play->hitboxes[3].pos = V2(4,-0.4);
-	play->hitboxes[3].dim = V2(0.8, 0.8);
-	play->hitboxes[3].flags = Cannon;
-	play->hitboxes[3].debugColour = V4(1,0,0,1);
-	
-	play->hitboxes[4].pos = V2(-1,-0.4);
-	play->hitboxes[4].dim = V2(0.1, 0.8);
-	play->hitboxes[4].flags = Cannon_Hole;
-	play->hitboxes[4].debugColour = V4(1,0,0,1);
-	
+	BuildWorldHitboxes(play);
 
     state->game_mode = GameMode_Play;
     state->play = *play;
@@ -369,33 +345,36 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		player_dim,
 		0
 	);
-
-	DrawQuad(
-		batch,
-		{0},
-		play->hitboxes[0].pos,
-		play->hitboxes[0].dim,
-		0,
-		play->hitboxes[0].debugColour
-	);
+	
+	for(u32 i = 0; i < play->hitbox_count; i++){
+		DrawQuad(
+			batch,
+			{0},
+			play->hitboxes[i].pos,
+			play->hitboxes[i].dim,
+			0,
+			play->hitboxes[i].debugColour
+		);
+	}
 
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
 
-	DrawQuad(
+	/*DrawQuad(
 		batch,
 	   	front_texture,
 		V3(0,0.2,0),
 		9.3,
 		0
-	);
-	
+	);*/
+	/*	
 	UpdateRenderWaveList(
 		input->delta_time,
 		batch,
 	   	play->front_waves,
 	   	play->front_wave_count
 	);
+	*/
 	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
 		Ship_Hole hole = play->ship_holes[i];
 		if(!hole.active) {
@@ -551,12 +530,6 @@ function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable){
             }
         }
     }
-	if(collision){
-		collidable->debugColour = V4(0,1,0,1);
-	}
-	else{
-		collidable->debugColour = V4(1,0,0,1);
-	}
     return noCollision;
 }
 

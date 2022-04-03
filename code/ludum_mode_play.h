@@ -21,7 +21,7 @@
 
 //Map
 //
-#define MAX_HITBOXES (5)
+#define MAX_HITBOXES (50)
 // In elementry units
 //
 #define MAX_SHIP_HOLES (10)
@@ -116,6 +116,7 @@ struct Mode_Play {
 	Player player;
 	f32 cloud_timer;
 	AABB hitboxes[MAX_HITBOXES];
+	u32 hitbox_count;
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
