@@ -50,7 +50,7 @@ function void ModePlay(Game_State *state, Input *input) {
 		&state->assets,
 	   	"enemy_border"
 	);
-	play->enemy_spawn_time = 10;
+	play->enemy_spawn_time = 100;
 	play->enemies[0].health = 0;
 	play->enemies[0].fire_interval = 10.0;
 	play->enemies[0].time_since_shot = 0;
@@ -383,6 +383,27 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 			play->hitboxes[i].debugColour
 		);
 	}
+	for(u32 i = 0; i < 3; i++) {
+		AABB *hitbox = play->trap_doors[i];
+		b32 open = hitbox->flags & Collision_Type_Was_On_Ladder;
+		Image_Handle handle = GetImageByName(
+			&state->assets,
+			"trapdoor_closed"
+		);
+		if(open) {
+			handle = GetImageByName(
+				&state->assets,
+				"trapdoor_open"
+			);
+		}
+		DrawQuad(
+			batch,
+			handle,
+			hitbox->pos - V2(0, hitbox->dim.y),
+			0.4,
+			0
+		);
+	}
 	DrawAnimation(
 		batch,
 	   	&(play->anim),
@@ -555,7 +576,8 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 				case(AABB_Sides_bottomSide):
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
 					player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2);
-					player->flags|=Player_OnGround;
+					player->flags |= Player_OnGround;
+					player->flags &= ~Player_DoubleJump;
 					player->dp.y=0;
 					break;
 				case(AABB_Sides_leftSide):
