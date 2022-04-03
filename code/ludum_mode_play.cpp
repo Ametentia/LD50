@@ -38,7 +38,7 @@ function void ModePlay(Game_State *state, Input *input) {
 	   	"wave_0"
 	);
 	play->front_waves[1].texture = front_water_texture2;
-	play->player.p = V2(0,-0.4);
+	play->player.p = V2(0,-0.5);
 	play->player.dim = V2(0.2,0.2);
 
     Image_Handle shipTexture = GetImageByName(
@@ -86,6 +86,32 @@ function void ModePlay(Game_State *state, Input *input) {
 		8,
 		1.0f/12
 	);
+
+	play->hitboxes[0].pos = V2(0,0.5);
+	play->hitboxes[0].dim = V2(5, 0.4);
+	play->hitboxes[0].flags = Normal;
+	play->hitboxes[0].debugColour = V4(1,0,0,1);
+
+	play->hitboxes[1].pos = V2(-2,0);
+	play->hitboxes[1].dim = V2(0.4, 2);
+	play->hitboxes[1].flags = Ladder;
+	play->hitboxes[1].debugColour = V4(1,0,0,1);
+	
+	play->hitboxes[2].pos = V2(2,0);
+	play->hitboxes[2].dim = V2(0.3, 0);
+	play->hitboxes[2].flags = Trap_Door;
+	play->hitboxes[2].debugColour = V4(1,0,0,1);
+	
+	play->hitboxes[3].pos = V2(4,-0.4);
+	play->hitboxes[3].dim = V2(0.8, 0.8);
+	play->hitboxes[3].flags = Cannon;
+	play->hitboxes[3].debugColour = V4(1,0,0,1);
+	
+	play->hitboxes[4].pos = V2(-1,-0.4);
+	play->hitboxes[4].dim = V2(0.1, 0.8);
+	play->hitboxes[4].flags = Cannon_Hole;
+	play->hitboxes[4].debugColour = V4(1,0,0,1);
+	
 
     state->game_mode = GameMode_Play;
     state->play = *play;
@@ -344,6 +370,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		0
 	);
 
+	DrawQuad(
+		batch,
+		{0},
+		play->hitboxes[0].pos,
+		play->hitboxes[0].dim,
+		0,
+		play->hitboxes[0].debugColour
+	);
+
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
 
@@ -465,26 +500,30 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
 	
-	// switch(result){
-	// 	case bottomSide:
-	// 		player->p.y= 0.4-((player->dim.y)/2 + 0.1);
-	// 		player->flags|=Player_OnGround;
-	// 		break;
-	// 	default:
-	// 	break;
-	// }
-	// if(result&bottomSide){
-	// 	player->dp.y=0;
-	// }
+	u32 collisions = 0;
+	for(u32 i = 0; i < 1; i++){
+		collisions |= ResolveCollision(player->p, player->dim, &(play->hitboxes[i]));
+		switch(collisions){
+			case bottomSide|collision:
+				player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2) ;
+				player->flags|=Player_OnGround;
+				break;
+			default:
+			break;
+		}
+		if(collisions&bottomSide){
+			player->dp.y=0;
+		}
+	}
 }
 
-function int ResolveCollision(v2 posA, v2 dimA, AABB collidable){
+function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable){
     rect2 a_r;
     rect2 b_r;
     a_r.min = posA - (0.5f*dimA);
     a_r.max = posA + (0.5f*dimA);
-    b_r.min = collidable.pos - (0.5f*collidable.dim);
-    b_r.max = collidable.pos + (0.5f*collidable.dim);
+    b_r.min = collidable->pos - (0.5f*collidable->dim);
+    b_r.max = collidable->pos + (0.5f*collidable->dim);
 
     v2 overlap;
     overlap.x =  Min(b_r.max.x, a_r.max.x) - Max(b_r.min.x, a_r.min.x);
@@ -493,25 +532,31 @@ function int ResolveCollision(v2 posA, v2 dimA, AABB collidable){
     if(overlap.x >= 0 && overlap.y >= 0){
         if(overlap.x < overlap.y){
             if(overlap.x > 0){
-                if(posA.x > collidable.pos.x){
-                    return leftSide;
+                if(posA.x > collidable->pos.x){
+                    return collision|leftSide;
                 }
                 else{
-                    return rightSide;
+                    return collision|rightSide;
                 }
             }
         }
         else{
             if(overlap.x > 0){
-                if(posA.y > collidable.pos.y){
-                    return topSide;
+                if(posA.y > collidable->pos.y){
+                    return collision|topSide;
                 }
                 else{
-                    return bottomSide;
+                    return collision|bottomSide;
                 }
             }
         }
     }
+	if(collision){
+		collidable->debugColour = V4(0,1,0,1);
+	}
+	else{
+		collidable->debugColour = V4(1,0,0,1);
+	}
     return noCollision;
 }
 
