@@ -49,7 +49,7 @@ function void ModePlay(Game_State *state, Input *input) {
 		&state->assets,
 	   	"enemy_border"
 	);
-	play->enemy_spawn_time = 12;
+	play->enemy_spawn_time = 1;
 	play->enemies[0].health = 0;
 	play->enemies[0].fire_interval = 10.0;
 	play->enemies[0].time_since_shot = 0;
@@ -170,20 +170,44 @@ function void UpdateRenderEnemyShip(
 			enemy->fire_interval = RandomF32(&(play->rand), 9, 15);
 			enemy->time_since_shot = 0;
 			printf("Bang %d %f!\n", i, enemy->fire_interval);
-			/*
-			// Upper deck Left
-			DrawQuad(batch, {0}, V3(-2.1,0.5,3), V2(0.3, 0.5), 0);
-			// Upper deck right
-			DrawQuad(batch, {0}, V3(2.3,0.5,3), V2(0.3, 0.5), 0);
-			// mid deck Left
-			DrawQuad(batch, {0}, V3(-2.1,1.1,3), V2(0.3, 0.5), 0);
-			// mid deck right
-			DrawQuad(batch, {0}, V3(2.1,1.1,3), V2(0.3, 0.5), 0);
-			// bottom deck Left
-			DrawQuad(batch, {0}, V3(-1.9,1.63,3), V2(0.3, 0.5), 0);
-			// bottom deck right
-			DrawQuad(batch, {0}, V3(1.7,1.63,3), V2(0.3, 0.5), 0);
-			*/
+			if(play->ship_hole_count < MAX_SHIP_HOLES) {
+				Ship_Layer ship_layer = (Ship_Layer)RandomU32(
+					&(play->rand),
+					Deck_Bottom,
+					Deck_Upper+1
+				);
+				printf("I hit %d\n", ship_layer);
+				v2 hitbox_dim = V2(0.3, 0.5);
+				f32 hitbox_x;
+				f32 hitbox_y;
+				switch(ship_layer) {
+					case Deck_Bottom:
+						hitbox_x = RandomF32(&(play->rand), -1.9, 1.7);
+						hitbox_y = 1.63;
+						break;
+					case Deck_Middle:
+						hitbox_x = RandomF32(&(play->rand), -2.1, 2.1);
+						hitbox_y = 1.1;
+						break;
+					case Deck_Upper:
+						hitbox_x = RandomF32(&(play->rand), -2.1, 2.3);
+						hitbox_y = 0.5;
+						break;
+				};
+				Ship_Hole *hole;
+				for(u8 i = 0; i < MAX_SHIP_HOLES; i++) {
+					if(!play->ship_holes[i].active) {
+						hole = &(play->ship_holes[i]);
+						break;
+					}
+				}
+				// lol hanging pointer funi
+				hole->position = V3(hitbox_x, hitbox_y, 3);
+				hole->hitbox_dim = hitbox_dim;
+				hole->active = true;
+				play->ship_hole_count++;
+			}
+
 		}
 	}
 	if(!all_alive) {
@@ -311,20 +335,22 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	   	play->front_waves,
 	   	play->front_wave_count
 	);
-	// Upper deck Left
-	DrawQuad(batch, {0}, V3(-2.1,0.5,3), V2(0.3, 0.5), 0);
-	// Upper deck right
-	DrawQuad(batch, {0}, V3(2.3,0.5,3), V2(0.3, 0.5), 0);
-	// mid deck Left
-	DrawQuad(batch, {0}, V3(-2.1,1.1,3), V2(0.3, 0.5), 0);
-	// mid deck right
-	DrawQuad(batch, {0}, V3(2.1,1.1,3), V2(0.3, 0.5), 0);
-	// bottom deck Left
-	DrawQuad(batch, {0}, V3(-1.9,1.63,3), V2(0.3, 0.5), 0);
-	// bottom deck right
-	DrawQuad(batch, {0}, V3(1.7,1.63,3), V2(0.3, 0.5), 0);
+	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		Ship_Hole hole = play->ship_holes[i];
+		if(!hole.active) {
+			continue;
+		}
+		DrawQuad(
+			batch,
+		   	{0},
+		   	hole.position,
+		   	hole.hitbox_dim,
+			0
+		);
+	}
 
-    v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
+    //v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
+	v3 mp = V3(play->player.p.x, play->player.p.y, 0);
 
     SetRenderTarget(batch, RenderTarget_Mask);
     DrawClear(batch, V4(0, 0, 0, 0));

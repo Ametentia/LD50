@@ -20,11 +20,20 @@
 //Map
 //
 #define MAX_HITBOXES (5)
+// In elementry units
+//
+#define MAX_SHIP_HOLES (10)
+
+enum Ship_Layer {
+    Deck_Bottom = 0,
+    Deck_Middle,
+	Deck_Upper
+};
 
 struct Ship_Hole {
 	v3 position;
 	b32 active;
-	v3 hitbox_dimensions;
+	v2 hitbox_dim;
 };
 
 struct Enemy_Ship {
@@ -87,7 +96,6 @@ struct Wave_Layer {
 	Image_Handle texture;
 };
 
-
 struct Mode_Play {
     Memory_Arena *alloc;
 	u32 back_wave_count;
@@ -98,7 +106,8 @@ struct Mode_Play {
 	f32 time_since_enemy;
 	f32 enemy_spawn_time;
 	Random rand;
-	Ship_Hole ship_holes[10];
+	Ship_Hole ship_holes[MAX_SHIP_HOLES];
+	f32 ship_hole_count;
 	f32 water_level;
 	Sprite_Animation anim;
 	Player player;
