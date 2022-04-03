@@ -35,8 +35,8 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 	// First ladder
 	AddHitBox(
 		play,
-	 	V2(0.125,0.78f),
-		V2(0.2, 0.8f),
+	 	V2(0.125,0.6f),
+		V2(0.2, 0.6f),
 		Collision_Type_Ladder
 	);
 	// private cabin floor

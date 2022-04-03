@@ -18,6 +18,7 @@
 #define PLAYER_DAMPING (25.0f)
 #define PLAYER_MAX_SPEED_X (2.2f)
 #define PLAYER_MAX_SPEED_Y (4.3f)
+#define PLAYER_LADDER_CLIMB_SPEED (1)
 
 //Map
 //
@@ -52,7 +53,8 @@ enum Player_Flags {
     Player_OnGround   = (1 << 0),
     Player_DoubleJump = (1 << 1),
 	Player_Holding	  = (1 << 2),
-	Player_Flipped	  = (1 << 3)
+	Player_Flipped	  = (1 << 3),
+	Player_On_Ladder  = (1 << 4)
 };
 
 enum AABB_Sides {
@@ -70,7 +72,8 @@ enum Collision_Type{
 	Collision_Type_Trap_Door = (1 << 2),
 	Collision_Type_Cannon = (1 << 3),
 	Collision_Type_Cannon_Hole = (1 << 4),
-	Collision_Type_Tentacles = (1 << 5)
+	Collision_Type_Tentacles = (1 << 5),
+	Collision_Type_Was_On_Ladder = (1 << 6)
 };
 
 struct AABB{
@@ -117,6 +120,8 @@ struct Mode_Play {
 	f32 cloud_timer;
 	AABB hitboxes[MAX_HITBOXES];
 	u32 hitbox_count;
+	Sprite_Animation ship_mast_1;
+	Sprite_Animation ship_mast_2;
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);

@@ -87,6 +87,25 @@ function void ModePlay(Game_State *state, Input *input) {
 		8,
 		1.0f/12
 	);
+    Image_Handle flag_texture = GetImageByName(
+		&state->assets,
+	   	"flag_animation"
+	);
+	Initialise(
+		&(play->ship_mast_1), 
+		flag_texture,
+		1,
+		11,
+		1.0f/24
+	);
+	Initialise(
+		&(play->ship_mast_2), 
+		flag_texture,
+		1,
+		11,
+		1.0f/24
+	);
+	play->ship_mast_1.current_frame = 2;
 	BuildWorldHitboxes(play);
 
     state->game_mode = GameMode_Play;
@@ -333,6 +352,8 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		play
 	);
 
+	UpdateAnimation(&(play->ship_mast_1), input->delta_time);
+	UpdateAnimation(&(play->ship_mast_2), input->delta_time);
 	UpdateAnimation(&(play->anim), input->delta_time);
 	v2 player_dim = play->player.dim;
 	if(play->player.flags & Player_Flipped) {
@@ -340,12 +361,18 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	}
 	DrawAnimation(
 		batch,
-	   	&(play->anim),
-	   	play->player.p,
-		player_dim,
+	   	&(play->ship_mast_1),
+	   	V3(0.2,-1,0),
+		V2(3, 3),
 		0
 	);
-
+	DrawAnimation(
+		batch,
+	   	&(play->ship_mast_2),
+	   	V3(2.2,-0.6,0),
+		V2(2, 2),
+		0
+	);
 	for(u32 i = 0; i < play->hitbox_count; i++){
 		DrawQuad(
 			batch,
@@ -356,25 +383,32 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 			play->hitboxes[i].debugColour
 		);
 	}
+	DrawAnimation(
+		batch,
+	   	&(play->anim),
+	   	play->player.p,
+		player_dim,
+		0
+	);
+
 
     SetRenderTarget(batch, RenderTarget_Masked);
     DrawClear(batch, V4(0, 0, 0, 0));
-
-	/*DrawQuad(
+	/*
+	DrawQuad(
 		batch,
 	   	front_texture,
 		V3(0,0.2,0),
 		9.3,
 		0
-	);*/
-	/*	
+	);
+		
 	UpdateRenderWaveList(
 		input->delta_time,
 		batch,
 	   	play->front_waves,
 	   	play->front_wave_count
-	);
-	*/
+	);*/
 	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
 		Ship_Hole hole = play->ship_holes[i];
 		if(!hole.active) {
@@ -404,6 +438,9 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 	f32 delta_time = input->delta_time;
 	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp = V2(0, gravity);
+	if(player->flags & Player_On_Ladder) {
+		ddp.y = 0;
+	}
 	b32 on_ground = (player->flags&Player_OnGround);
 
     // Attempt to jump. We will buffer this for an amount of time so if the player presses jump
@@ -411,21 +448,33 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     //
     if (JustPressed(input->keys[Key_Space])) {
         player->last_jump_time = input->time;
+		player->flags &= ~Player_On_Ladder;
 		on_ground = 0;
     }
 
     // Move left
     //
-    if (IsPressed(input->keys[Key_A])) {
+    if (JustPressed(input->keys[Key_A])) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags |= Player_Flipped;
+		player->flags &= ~Player_On_Ladder;
     }
+	else if(IsPressed(input->keys[Key_A]) && !(player->flags & Player_On_Ladder)) {
+        ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+		player->flags |= Player_Flipped;
+	}
 
     // Move right
     //
-    if (IsPressed(input->keys[Key_D])) {
+	if(JustPressed(input->keys[Key_D])) {
+		player->flags &= ~Player_On_Ladder;
+        ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+		player->flags &= ~Player_Flipped;
+	}
+    else if (IsPressed(input->keys[Key_D]) && !(player->flags & Player_On_Ladder)) {
         ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
+		player->flags &= ~Player_On_Ladder;
     }
 
     // If neither left or right were pressed apply damping to the player
@@ -459,7 +508,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
         f32 limit_dp_sq   = (2 * gravity * (PLAYER_MAX_JUMP_HEIGHT - PLAYER_MIN_JUMP_HEIGHT));
 
         f32 term_dp = -Sqrt(initial_dp_sq - limit_dp_sq);
-        if (player->dp.y < term_dp) {
+        if (player->dp.y < term_dp && player->flags & Player_On_Ladder) {
             player->dp.y = term_dp;
         }
     }
@@ -480,9 +529,20 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->dp += (ddp * delta_time);
 	
 	for(u32 i = 0; i < play->hitbox_count; i++){
-		u32 result = ResolveCollision(player->p, player->dim, &(play->hitboxes[i]));
+		AABB *hitbox = &(play->hitboxes[i]);
+		u32 result = ResolveCollision(player->p, player->dim, hitbox);
+		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door))
+			hitbox->flags &= ~Collision_Type_Was_On_Ladder;
+		u32 colliding = result & AABB_Sides_collision;
 		u32 no_col_flag = result & ~AABB_Sides_collision;
-		if(play->hitboxes[i].flags & (Collision_Type_Normal | Collision_Type_Trap_Door)){
+		if(hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)){
+			if(hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
+				hitbox->flags |= Collision_Type_Was_On_Ladder;
+				continue;
+			}
+			if(hitbox->flags & Collision_Type_Was_On_Ladder) {
+				continue;
+			}
 			switch(no_col_flag){
 				case(AABB_Sides_bottomSide):
 					play->hitboxes[i].debugColour = V4(0,1,0,1);
@@ -496,6 +556,31 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 					break;
 				default:
 					break;
+			}
+		}
+		if(colliding && hitbox->flags & Collision_Type_Ladder) {
+			hitbox->debugColour = V4(0,1,0,1);
+			if(IsPressed(input->keys[Key_W])
+					|| IsPressed(input->keys[Key_S])) {
+				player->p.x = hitbox->pos.x;
+				player->dp.x = 0;
+				player->dp.y = 0;
+				player->flags |= Player_On_Ladder;
+			}
+			if(player->flags & Player_On_Ladder) {
+				ddp.y = 0;
+				if(IsPressed(input->keys[Key_W])) {
+					f32 move_len = delta_time * PLAYER_LADDER_CLIMB_SPEED;
+					if(player->p.y - move_len + player->dim.y/2 > hitbox->pos.y - hitbox->dim.y/2){
+						player->p.y -= delta_time * PLAYER_LADDER_CLIMB_SPEED;
+					}
+					else {
+						player->flags &= ~Player_On_Ladder;
+					}
+				}
+				else if(IsPressed(input->keys[Key_S])) {
+					player->p.y += delta_time * PLAYER_LADDER_CLIMB_SPEED;
+				}
 			}
 		}
 	}
