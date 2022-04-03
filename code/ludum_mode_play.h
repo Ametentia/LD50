@@ -23,10 +23,11 @@
 //Map
 //
 #define MAX_HITBOXES (50)
+
 // In elementry units
 //
 #define MAX_SHIP_HOLES (10)
-#define CLOUD_COUNT (10)
+#define CLOUD_COUNT    (10)
 
 enum Ship_Layer {
     Deck_Bottom = 0,
@@ -41,7 +42,7 @@ struct Ship_Hole {
 };
 
 struct Enemy_Ship {
-	s32 health;	
+	s32 health;
 	f32 fire_interval;
 	f32 time_since_shot;
 	f32 width;
@@ -86,9 +87,13 @@ struct AABB{
 struct Game_State;
 
 struct Player{
+	Sprite_Animation anim;
+
 	u32 flags;
+
     f32 last_jump_time;
     f32 last_on_ground_time;
+
 	v2 p;
 	v2 dp;
 	v2 dim;
@@ -104,8 +109,10 @@ struct Wave_Layer {
 
 struct Mode_Play {
     Memory_Arena *alloc;
+
 	u32 back_wave_count;
 	Wave_Layer back_waves[3];
+
 	u32 front_wave_count;
 	Wave_Layer front_waves[3];
 	Enemy_Ship enemies[2];
@@ -115,7 +122,6 @@ struct Mode_Play {
 	Ship_Hole ship_holes[MAX_SHIP_HOLES];
 	f32 ship_hole_count;
 	f32 water_level;
-	Sprite_Animation anim;
 	Player player;
 	f32 cloud_timer;
 	AABB hitboxes[MAX_HITBOXES];
@@ -125,6 +131,6 @@ struct Mode_Play {
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
-function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_State *state);
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input);
 
 #endif  // PLAY_H_

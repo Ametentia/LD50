@@ -1,136 +1,90 @@
-#include "ludum_mode_play.h"
-#include "ludum_world_hitbox.cpp"
 function void ModePlay(Game_State *state, Input *input) {
     Reset(&state->mode_arena);
 
     Mode_Play *play = AllocType(&state->mode_arena, Mode_Play);
-    play->alloc = &state->mode_arena;
-	play->rand = RandomSeed(input->ticks);
+    play->alloc     = &state->mode_arena;
+	play->rand      = RandomSeed(input->ticks);
 
+    // Setup back waves
 	play->back_wave_count = 1;
-	play->front_wave_count = 2;
 
 	play->back_waves[0].position = V3(0, -0.2f, -0.3f);
-	play->back_waves[0].radius = 0.5f;
-	play->back_waves[0].angle = 270;
-	play->back_waves[0].speed = 280;
-    Image_Handle back_water_texture = GetImageByName(
-		&state->assets,
-	   	"wave_2"
-	);
-	play->back_waves[0].texture = back_water_texture;
+	play->back_waves[0].radius   = 0.5f;
+	play->back_waves[0].angle    = 270;
+	play->back_waves[0].speed    = 280;
+	play->back_waves[0].texture  =  GetImageByName(&state->assets, "wave_2");
+
+    // Setup front waves
+    //
+	play->front_wave_count = 2;
 
 	play->front_waves[0].position = V3(0, -0.1f, 0.15f);
-	play->front_waves[0].radius = 0.3f;
-	play->front_waves[0].angle = 180;
-	play->front_waves[0].speed = 360;
-    Image_Handle front_water_texture1 = GetImageByName(
-		&state->assets,
-	   	"wave_1"
-	);
-	play->front_waves[0].texture = front_water_texture1;
+	play->front_waves[0].radius   = 0.3f;
+	play->front_waves[0].angle    = 180;
+	play->front_waves[0].speed    = 360;
+	play->front_waves[0].texture  = GetImageByName(&state->assets, "wave_1");
 
 	play->front_waves[1].position = V3(0, 0, 0.3f);
-	play->front_waves[1].radius = 0.2f;
-	play->front_waves[1].angle = 0;
-	play->front_waves[1].speed = 380;
-    Image_Handle front_water_texture2 = GetImageByName(
-		&state->assets,
-	   	"wave_0"
-	);
-	play->front_waves[1].texture = front_water_texture2;
-	play->player.p = V2(0,-0.5);
-	play->player.dim = V2(0.2,0.2);
+	play->front_waves[1].radius   = 0.2f;
+	play->front_waves[1].angle    = 0;
+	play->front_waves[1].speed    = 380;
+	play->front_waves[1].texture  = GetImageByName(&state->assets, "wave_0");
 
-    Image_Handle shipTexture = GetImageByName(
-		&state->assets,
-	   	"badship"
-	);
-    Image_Handle enemy_border = GetImageByName(
-		&state->assets,
-	   	"enemy_border"
-	);
-	play->enemy_spawn_time = 10;
-	play->enemies[0].health = 0;
-	play->enemies[0].fire_interval = 10.0;
-	play->enemies[0].time_since_shot = 0;
-	play->enemies[0].width = 0;
-	play->enemies[0].border = enemy_border;
-	Initialise(
-		&(play->enemies[0].anim), 
-		shipTexture,
-		1,
-		2,
-		0.7f
-	);
+    // Setup player
+    //
+    Player *player = &play->player;
+	player->p      = V2(0.0f, -0.5f);
+	player->dim    = V2(0.2f,  0.2f);
 
-	play->enemies[1].health = 0;
-	play->enemies[1].fire_interval = 10.0;
-	play->enemies[1].time_since_shot = 0;
-	play->enemies[1].width = 0;
-	play->enemies[1].border = enemy_border;
-	Initialise(
-		&(play->enemies[1].anim), 
-		shipTexture,
-		1,
-		2,
-		0.7f
-	);
-    Image_Handle skipper = GetImageByName(
-		&state->assets,
-	   	"skipper_walking"
-	);
-	Initialise(
-		&(play->anim), 
-		skipper,
-		1,
-		8,
-		1.0f/12
-	);
-    Image_Handle flag_texture = GetImageByName(
-		&state->assets,
-	   	"flag_animation"
-	);
-	Initialise(
-		&(play->ship_mast_1), 
-		flag_texture,
-		1,
-		11,
-		1.0f/24
-	);
-	Initialise(
-		&(play->ship_mast_2), 
-		flag_texture,
-		1,
-		11,
-		1.0f/24
-	);
+	Initialise(&player->anim, GetImageByName(&state->assets, "skipper_walking"), 1, 8, 1.0f / 12.0f);
+
+    // Setup enemy ships
+    //
+	play->enemy_spawn_time    = 10;
+
+    Image_Handle enemy_ship   = GetImageByName(&state->assets, "badship");
+    Image_Handle enemy_border = GetImageByName(&state->assets, "enemy_border");
+
+    for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
+        play->enemies[it].health          = 0;
+        play->enemies[it].fire_interval   = 10.0f;
+        play->enemies[it].time_since_shot = 0;
+        play->enemies[it].width           = 0;
+        play->enemies[it].border          = enemy_border;
+
+        Initialise(&play->enemies[it].anim, enemy_ship, 1, 2, 0.7f);
+    }
+
+    Image_Handle flag_texture = GetImageByName(&state->assets, "flag_animation");
+
+	Initialise(&play->ship_mast_1, flag_texture, 1, 11, 1.0f / 24.0f);
+	Initialise(&play->ship_mast_2, flag_texture, 1, 11, 1.0f / 24.0f);
+
 	play->ship_mast_1.current_frame = 2;
+
 	BuildWorldHitboxes(play);
 
     state->game_mode = GameMode_Play;
     state->play = *play;
 }
 
-function void UpdateShipHoles(
-	f64 dt,
-	Draw_Batch *batch,
-	Ship_Hole *ship_holes
-) {
+function void UpdateShipHoles(f64 dt, Draw_Batch *batch, Ship_Hole *ship_holes) {
+    (void) dt;
+    (void) batch;
+    (void) ship_holes;
 }
 
-function void UpdateRenderClouds(
-	f64 dt,
-	Draw_Batch *batch,
-	Game_State *state
-) {
-	Mode_Play *play = &(state->play);
+function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
+	Mode_Play *play = &state->play;
+
 	play->cloud_timer += dt;
+
 	if(play->cloud_timer > CLOUD_SLIDE_TIME) {
 		play->cloud_timer = 0;
 	}
-	for(s32 i = CLOUD_COUNT-1; i > -1; i--) {
-		char tags[10][9] = {
+
+	for(s32 i = CLOUD_COUNT - 1; i > -1; i--) {
+		const char *tags[10] = {
 			"clouds_0",
 			"clouds_1",
 			"clouds_2",
@@ -142,316 +96,204 @@ function void UpdateRenderClouds(
 			"clouds_8",
 			"clouds_9"
 		};
-		Image_Handle cloud = GetImageByName(
-			&state->assets,
-			tags[i]
-		);
-		f32 mod = 1;
-		if(i % 2) {
-			mod = -1;
-		}
-		f32 offset = play->cloud_timer + (CLOUD_SLIDE_TIME/CLOUD_COUNT)*i;
-		if(offset > CLOUD_SLIDE_TIME) {
-			 offset -= CLOUD_SLIDE_TIME;
-		}
-		DrawQuad(
-			batch,
-			cloud,
-			V3(
-				mod*Lerp(0, 9.6f, offset/CLOUD_SLIDE_TIME),
-				(9.6/(CLOUD_COUNT*2))*i,
-			   	-0.4
-			),
-			9.6
-		);
-		DrawQuad(
-			batch,
-			cloud,
-			V3(
-				mod*Lerp(-9.6f, 0, offset/CLOUD_SLIDE_TIME),
-				(9.6/(CLOUD_COUNT*2))*i,
-			   	-0.4
-			),
-			9.6
-		);
+
+		Image_Handle cloud = GetImageByName(&state->assets, tags[i]);
+
+		f32 mod    = (i % 2) ? -1 : 1;
+		f32 offset = play->cloud_timer + (CLOUD_SLIDE_TIME / CLOUD_COUNT) * i;
+
+		if (offset > CLOUD_SLIDE_TIME) { offset -= CLOUD_SLIDE_TIME; }
+
+        v3 p;
+        p.x = mod * Lerp(0, 9.6f, offset / CLOUD_SLIDE_TIME);
+        p.y = (9.6 / (CLOUD_COUNT * 2)) * i;
+        p.z = -0.4;
+
+		DrawQuad(batch, cloud, p, 9.6);
+
+        p.x = mod * Lerp(-9.6f, 0, offset / CLOUD_SLIDE_TIME);
+		DrawQuad(batch, cloud, p, 9.6);
 	}
 }
 
-function void UpdateRenderEnemyShip(
-	f64 dt,
-	Draw_Batch *batch,
-	Mode_Play *play
-) {
+function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) {
 	b32 all_alive = 1;
-	for(u8 i = 0; i < 2; i++) {
-		Enemy_Ship *enemy = &(play->enemies[i]);
-		if(play->time_since_enemy > play->enemy_spawn_time && enemy->health <= 0) {
+
+	for(u8 i = 0; i < ArraySize(play->enemies); i++) {
+		Enemy_Ship *enemy = &play->enemies[i];
+
+		if (play->time_since_enemy > play->enemy_spawn_time && enemy->health <= 0) {
 			play->time_since_enemy = 0;
 			enemy->health = 3;
 			play->enemy_spawn_time = RandomF32(&(play->rand), 20, 35);
 			printf("Next spawn in %f\n", play->enemy_spawn_time);
 		}
-		if(enemy->health <= 0) {
+
+		if (enemy->health <= 0) {
 			all_alive = 0;
 			continue;
 		}
+
 		enemy->time_since_shot += dt;
-		enemy->width += 5*dt;
+		enemy->width           += 5 * dt;
+
 		v3 pos = V3(-2.4, -1.2, 0.8);
 		v2 scale = V2(Min(enemy->width, 1.8f), Min(enemy->width, 1.8f));
-		if(i%2) {
-			pos.x = -pos.x;
+		if (i % 2) {
+			pos.x   = -pos.x;
 			scale.x = -scale.x;
 		}
-		UpdateAnimation(&(enemy->anim), dt);
-		DrawQuad(
-			batch,
-			enemy->border,
-			pos,
-			scale,
-			0
-		);
-		DrawAnimation(
-			batch, 
-			&(enemy->anim),
-			pos,
-			scale,
-			0
-		);
+
+		UpdateAnimation(&enemy->anim, dt);
+
+		DrawQuad(batch, enemy->border, pos, scale, 0);
+		DrawAnimation(batch, &enemy->anim, pos, scale, 0);
+
 		if(enemy->time_since_shot > enemy->fire_interval) {
 			enemy->fire_interval = RandomF32(&(play->rand), 9, 15);
 			enemy->time_since_shot = 0;
 			if(play->ship_hole_count < MAX_SHIP_HOLES) {
-				Ship_Layer ship_layer = (Ship_Layer)RandomU32(
-					&(play->rand),
-					Deck_Bottom,
-					Deck_Upper+1
-				);
+				Ship_Layer ship_layer = (Ship_Layer)RandomU32(&play->rand, Deck_Bottom, Deck_Upper + 1);
+
+                v2 hitbox_p   = V2(0, 0);
 				v2 hitbox_dim = V2(0.3, 0.5);
-				f32 hitbox_x;
-				f32 hitbox_y;
-				switch(ship_layer) {
-					case Deck_Bottom:
-						hitbox_x = RandomF32(&(play->rand), -1.9, 1.7);
-						hitbox_y = 1.63;
-						break;
-					case Deck_Middle:
-						hitbox_x = RandomF32(&(play->rand), -2.1, 2.1);
-						hitbox_y = 1.1;
-						break;
-					case Deck_Upper:
-						hitbox_x = RandomF32(&(play->rand), -2.1, 2.3);
-						hitbox_y = 0.5;
-						break;
+
+				switch (ship_layer) {
+					case Deck_Bottom: {
+					    hitbox_p.x = RandomF32(&play->rand, -1.9, 1.7);
+						hitbox_p.y = 1.63;
+                    }
+                    break;
+					case Deck_Middle: {
+						hitbox_p.x = RandomF32(&play->rand, -2.1, 2.1);
+						hitbox_p.y = 1.1;
+                    }
+                    break;
+					case Deck_Upper: {
+						hitbox_p.x = RandomF32(&(play->rand), -2.1, 2.3);
+						hitbox_p.y = 0.5;
+                    }
+                    break;
 				};
-				Ship_Hole *hole;
-				for(u8 i = 0; i < MAX_SHIP_HOLES; i++) {
-					if(!play->ship_holes[i].active) {
-						hole = &(play->ship_holes[i]);
+
+				for (u32 h = 0; h < MAX_SHIP_HOLES; h++) {
+                    Ship_Hole *hole = &play->ship_holes[h];
+
+					if (!hole->active) {
+                        hole->position   = V3(hitbox_p, 3);
+                        hole->hitbox_dim = hitbox_dim;
+                        hole->active     = true;
+
+                        play->ship_hole_count++;
 						break;
 					}
 				}
-				// lol hanging pointer funi
-				hole->position = V3(hitbox_x, hitbox_y, 3);
-				hole->hitbox_dim = hitbox_dim;
-				hole->active = true;
-				play->ship_hole_count++;
 			}
-
 		}
 	}
-	if(!all_alive) {
-		play->time_since_enemy += dt;
-	}
+
+	if (!all_alive) { play->time_since_enemy += dt; }
 }
 
-function void UpdateRenderWaveList(
-	f64 dt,
-	Draw_Batch *batch,
-   	Wave_Layer *layers,
-   	u32 layer_count
-) {
-	for(u8 i = 0; i < layer_count; i++) {
+function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers, u32 layer_count) {
+	for(u32 i = 0; i < layer_count; i++) {
 		Wave_Layer *layer = (Wave_Layer*)(layers+i);
 		layer->angle += Degrees(layer->speed) * dt;
 		v2 distance = V2(layer->radius, 0);
 		v2 rotated = Rotate(distance, layer->angle);
 		v3 render_pos = layer->position + V3(rotated.x, rotated.y, 0);
-		DrawQuad(
-			batch,
-			layer->texture,
-			render_pos,
-			12,
-			0
-		);
+		DrawQuad(batch, layer->texture, render_pos, 12, 0);
 	}
 }
 
 function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buffer *renderer_buffer) {
     Mode_Play *play = &(state->play);
+
+    Player *player = &play->player;
+	UpdateAnimation(&player->anim, input->delta_time);
+
+	UpdateAnimation(&play->ship_mast_1, input->delta_time);
+	UpdateAnimation(&play->ship_mast_2, input->delta_time);
+
     Draw_Batch _batch = {};
     Draw_Batch *batch = &_batch;
+
     Initialise(batch, &state->assets, renderer_buffer);
+
     SetCameraTransform(batch, 0, V3(1, 0, 0), V3(0, 1, 0), V3(0, 0, 1), V3(0, 0, 15));
     DrawClear(batch, V4(0, 1, 1, 1));
-    Image_Handle background = GetImageByName(
-		&state->assets,
-	   	"background"
-	);
-    Image_Handle back_texture = GetImageByName(
-		&state->assets,
-	   	"back_layer"
-	);
-    Image_Handle middle_texture = GetImageByName(
-		&state->assets,
-	   	"middle_layer"
-	);
-    Image_Handle front_texture = GetImageByName(
-		&state->assets,
-	   	"front_layer"
-	);
-	
-	
-	UpdatePlayer(play, &(play->player), input, state);
-	DrawQuad(
-		batch,
-	   	background,
-		V3(0,0,-0.5),
-		9.6,
-		0
-	);
-	UpdateRenderClouds(
-		input->delta_time,
-		batch,
-		state
-	);
-	UpdateRenderWaveList(
-		input->delta_time,
-		batch,
-	   	play->back_waves,
-	   	play->back_wave_count
-	);
-	DrawQuad(
-		batch,
-	   	back_texture,
-		V3(0,0.2,0),
-		9.3,
-		0
-	);
-	DrawQuad(
-		batch,
-	   	middle_texture,
-		V3(0,0.2,0),
-		9.3,
-		0
-	);
-	UpdateRenderEnemyShip(
-		input->delta_time,
-		batch,
-		play
-	);
 
-	UpdateAnimation(&(play->ship_mast_1), input->delta_time);
-	UpdateAnimation(&(play->ship_mast_2), input->delta_time);
-	UpdateAnimation(&(play->anim), input->delta_time);
-	v2 player_dim = play->player.dim;
-	if(play->player.flags & Player_Flipped) {
-		player_dim.x = -player_dim.x;
-	}
-	DrawAnimation(
-		batch,
-	   	&(play->ship_mast_1),
-	   	V3(0.2,-1,0),
-		V2(3, 3),
-		0
-	);
-	DrawAnimation(
-		batch,
-	   	&(play->ship_mast_2),
-	   	V3(2.2,-0.6,0),
-		V2(2, 2),
-		0
-	);
+    Image_Handle background     = GetImageByName(&state->assets, "background");
+    Image_Handle back_texture   = GetImageByName(&state->assets, "back_layer");
+    Image_Handle middle_texture = GetImageByName(&state->assets, "middle_layer");
+    Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
+
+	UpdatePlayer(play, &(play->player), input);
+	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
+
+	UpdateRenderClouds(input->delta_time, batch, state);
+	UpdateRenderWaveList(input->delta_time, batch, play->back_waves, play->back_wave_count);
+
+	DrawQuad(batch, back_texture,   V3(0, 0.2, 0), 9.3, 0);
+	DrawQuad(batch, middle_texture, V3(0, 0.2, 0), 9.3, 0);
+
+	v2 player_dim = player->dim;
+	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
+
+	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
+	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
+
 	for(u32 i = 0; i < play->hitbox_count; i++){
-		DrawQuad(
-			batch,
-			{0},
-			play->hitboxes[i].pos,
-			play->hitboxes[i].dim,
-			0,
-			play->hitboxes[i].debugColour
-		);
+        AABB *hitbox = &play->hitboxes[i];
+		DrawQuad(batch, { 0 }, hitbox->pos, hitbox->dim, 0, hitbox->debugColour);
 	}
-	DrawAnimation(
-		batch,
-	   	&(play->anim),
-	   	play->player.p,
-		player_dim,
-		0
-	);
 
+	DrawAnimation(batch, &player->anim, player->p, player_dim, 0);
 
-	if(play->player.p.y > 0.23) {
+	UpdateRenderEnemyShip(input->delta_time, batch, play);
+
+	if (player->p.y > 0.23) {
 		SetRenderTarget(batch, RenderTarget_Masked);
 		DrawClear(batch, V4(0, 0, 0, 0));
 	}
-	DrawQuad(
-		batch,
-	   	front_texture,
-		V3(0,0.2,0),
-		9.3,
-		0
-	);
-		
-	UpdateRenderWaveList(
-		input->delta_time,
-		batch,
-	   	play->front_waves,
-	   	play->front_wave_count
-	);
-	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
-		Ship_Hole hole = play->ship_holes[i];
-		if(!hole.active) {
-			continue;
-		}
-		DrawQuad(
-			batch,
-		   	{0},
-		   	hole.position,
-		   	hole.hitbox_dim,
-			0
-		);
+
+	DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
+
+	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
+
+	for (u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		Ship_Hole *hole = &play->ship_holes[i];
+		if (!hole->active) { continue; }
+
+		DrawQuad(batch, { 0 }, hole->position, hole->hitbox_dim);
 	}
 
-    //v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
-	v3 mp = V3(play->player.p.x, play->player.p.y, 0);
-
-
-	if(play->player.p.y > 0.23) {
+	if (play->player.p.y > 0.23) {
 		SetRenderTarget(batch, RenderTarget_Mask);
 		DrawClear(batch, V4(0, 0, 0, 0));
 
-		DrawCircle(batch, { 0 }, mp.xy, 0.95);
+		DrawCircle(batch, { 0 }, player->p, 0.95);
+
 		ResolveMasks(batch, false);
 	}
 }
 
-function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_State *state){
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 	f32 delta_time = input->delta_time;
-	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
-    v2 ddp = V2(0, gravity);
-	b32 on_ground = (player->flags&Player_OnGround);
+	f32 gravity    = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
+    v2 ddp         = V2(0, gravity);
+	b32 on_ground  = (player->flags&Player_OnGround);
 
     // Attempt to jump. We will buffer this for an amount of time so if the player presses jump
     // slightly before hitting the ground it will still count
     //
-    if (JustPressed(input->keys[Key_Space])) {
+    if (JustPressed(input->keys[Key_Space]) || JustPressed(input->keys[Key_K])) {
         player->last_jump_time = input->time;
 		player->flags &= ~Player_On_Ladder;
 		on_ground = 0;
     }
 
-	b32 on_ladder = player->flags & Player_On_Ladder;
+	b32 on_ladder  = player->flags & Player_On_Ladder;
 	b32 up_or_down = IsPressed(input->keys[Key_S]) || IsPressed(input->keys[Key_W]);
 
     // Move left
@@ -487,7 +329,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     // If neither left or right were pressed apply damping to the player
     //
     if (IsZero(ddp.x)) {
-        player->dp.x     *= (1.0f / (1 + (PLAYER_DAMPING * delta_time)));
+        player->dp.x *= (1.0f / (1 + (PLAYER_DAMPING * delta_time)));
     }
 
     if ((input->time - player->last_jump_time) <= PLAYER_JUMP_BUFFER_TIME) {
@@ -536,75 +378,91 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->dp += (ddp * delta_time);
 	b32 anyLadder = 0;
 	for(u32 i = 0; i < play->hitbox_count; i++){
-		AABB *hitbox = &(play->hitboxes[i]);
-		u32 result = ResolveCollision(player->p, player->dim, hitbox);
-		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door))
+		AABB *hitbox = &play->hitboxes[i];
+
+		u32 result   = ResolveCollision(player->p, player->dim, hitbox);
+		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door)) {
 			hitbox->flags &= ~Collision_Type_Was_On_Ladder;
-		u32 colliding = result & AABB_Sides_collision;
+        }
+
+		u32 colliding   = result & AABB_Sides_collision;
 		u32 no_col_flag = result & ~AABB_Sides_collision;
-		if(hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)){
-			if(hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
+
+		if (hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)) {
+			if (hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
 				hitbox->flags |= Collision_Type_Was_On_Ladder;
 				continue;
 			}
-			if(hitbox->flags & Collision_Type_Was_On_Ladder) {
-				continue;
-			}
-			switch(no_col_flag){
-				case(AABB_Sides_bottomSide):
-					play->hitboxes[i].debugColour = V4(0,1,0,1);
-					player->p.y = play->hitboxes[i].pos.y - (play->hitboxes[i].dim.y/2 + player->dim.y/2);
-					player->flags|=Player_OnGround;
-					player->dp.y=0;
-					break;
-				case (AABB_Sides_leftSide):
-					play->hitboxes[i].debugColour = V4(0,1,0,1);
-					player->p.x = play->hitboxes[i].pos.x + (play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
-					player->dp.x=0;
-					break;
-				case (AABB_Sides_rightSide):
-					play->hitboxes[i].debugColour = V4(0,1,0,1);
-					player->p.x = play->hitboxes[i].pos.x - (play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
-					player->dp.x=0;
-					break;
-				case (AABB_Sides_topSide):
-					play->hitboxes[i].debugColour = V4(0,1,0,1);
-					player->p.x = -(play->hitboxes[i].dim.x/2 + player->dim.x/2) ;
-					player->dp.y=0;
-					break;
-				default:
-					break;
+
+			if (hitbox->flags & Collision_Type_Was_On_Ladder) { continue; }
+
+			switch(no_col_flag) {
+				case AABB_Sides_bottomSide: {
+                    hitbox->debugColour = V4(0, 1, 0, 1);
+
+					player->dp.y    = 0;
+					player->p.y     = hitbox->pos.y - (hitbox->dim.y / 2.0f + player->dim.y / 2.0f);
+					player->flags  |= Player_OnGround;
+
+                }
+                break;
+
+				case AABB_Sides_leftSide: {
+                    hitbox->debugColour = V4(0, 1, 0, 1);
+
+					player->dp.x = 0;
+					player->p.x  = hitbox->pos.x + (hitbox->dim.x / 2.0f + player->dim.x / 2.0f);
+                }
+                break;
+				case AABB_Sides_rightSide: {
+                    hitbox->debugColour = V4(0, 1, 0, 1);
+
+					player->dp.x = 0;
+					player->p.x  = hitbox->pos.x - (hitbox->dim.x / 2.0f + player->dim.x / 2.0f) ;
+                }
+                break;
+				case AABB_Sides_topSide: {
+                    hitbox->debugColour = V4(0, 1, 0, 1);
+
+					player->dp.y = 0;
+					player->p.x  = -(hitbox->dim.x / 2.0f + player->dim.x / 2.0f);
+                }
+                break;
+
+				default: {} break;
 			}
 		}
-		if(colliding && hitbox->flags & Collision_Type_Ladder) {
+
+		if (colliding && (hitbox->flags & Collision_Type_Ladder)) {
 			anyLadder = true;
-			hitbox->debugColour = V4(0,1,0,1);
-			if((IsPressed(input->keys[Key_W])
-					|| IsPressed(input->keys[Key_S])) 
-					&& !(player->flags & Player_On_Ladder)) {
+
+			hitbox->debugColour = V4(0, 1, 0, 1);
+
+			if(up_or_down && !(player->flags & Player_On_Ladder)) {
 				player->p.x = hitbox->pos.x;
 				player->dp.x = 0;
 				player->dp.y = 0;
 				player->flags |= Player_On_Ladder;
 				player->flags |= Player_OnGround;
 			}
+
 			if(player->flags & Player_On_Ladder) {
 				ddp.y = 0;
-				if(IsPressed(input->keys[Key_W])) {
+
+				if (IsPressed(input->keys[Key_W])) {
 					f32 move_len = delta_time * PLAYER_LADDER_CLIMB_SPEED;
-					if(player->p.y - move_len + player->dim.y/2 > hitbox->pos.y - hitbox->dim.y/2){
+					if (player->p.y - move_len + player->dim.y / 2.0f > hitbox->pos.y - hitbox->dim.y / 2.0f){
 						player->p.y -= move_len;
 					}
 				}
-				else if(IsPressed(input->keys[Key_S])) {
+				else if (IsPressed(input->keys[Key_S])) {
 					player->p.y += delta_time * PLAYER_LADDER_CLIMB_SPEED;
 				}
 			}
 		}
 	}
-	if(!anyLadder){
-		player->flags &= ~Player_On_Ladder;
-	}
+
+	if (!anyLadder) { player->flags &= ~Player_On_Ladder; }
 }
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable){

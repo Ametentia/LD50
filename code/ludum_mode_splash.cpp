@@ -1,6 +1,6 @@
-#include "ludum_mode_splash.h"
 function Move_Type GetOppositeMove(Move_Type move) {
-    Move_Type opp;
+    Move_Type opp = MoveType_None;
+
     switch(move) {
         case MoveType_Up: {
             opp = MoveType_Down;
@@ -18,7 +18,11 @@ function Move_Type GetOppositeMove(Move_Type move) {
             opp = MoveType_Right;
         }
         break;
+
+        case MoveType_None:
+        default: {} break;
     };
+
     return opp;
 }
 

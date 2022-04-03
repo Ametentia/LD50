@@ -10,8 +10,12 @@ function void ModeMenu(Game_State *state) {
 }
 
 function void UpdateRenderModeMenu(Game_State *state, Input *input, Renderer_Buffer *renderer_buffer) {
+    (void) input; // @Todo: Sort out menu
+
     Draw_Batch _batch = {};
     Draw_Batch *batch = &_batch;
+
     Initialise(batch, &state->assets, renderer_buffer);
+
     DrawClear(batch, V4(1, 0, 0, 1));
 }
