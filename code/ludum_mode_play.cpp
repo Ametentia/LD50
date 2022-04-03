@@ -561,16 +561,15 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->dp += (ddp * delta_time);
 	b32 anyLadder = 0;
 	for(u32 i = 0; i < play->hitbox_count; i++){
-		AABB *hitbox = play->hitboxes + i;
+		AABB *hitbox = &play->hitboxes[i];
 		u32 result = ResolveCollision(player->p, player->dim, hitbox);
-		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door)) {
+		u32 colliding = result & AABB_Sides_collision;
+		if(!colliding && (hitbox->flags & Collision_Type_Trap_Door)) {
 			hitbox->flags &= ~Collision_Type_Was_On_Ladder;
 		}
-		u32 colliding = result & AABB_Sides_collision;
-
 		u32 no_col_flag = result & ~AABB_Sides_collision;
 		if(hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)){
-			if(hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
+			if(colliding && (hitbox->flags & Collision_Type_Trap_Door) && (player->flags & Player_On_Ladder)) {
 				hitbox->flags |= Collision_Type_Was_On_Ladder;
 				continue;
 			}
