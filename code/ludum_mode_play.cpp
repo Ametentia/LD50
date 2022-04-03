@@ -254,6 +254,7 @@ function void UpdateRenderEnemyShip(
 				// lol hanging pointer funi
 				hole->position = V3(hitbox_x, hitbox_y, 0.001);
 				hole->hitbox_dim = hitbox_dim;
+				hole->rot = RandomF32(&(play->rand), 0, 360);
 				hole->active = true;
 				play->ship_hole_count++;
 			}
@@ -399,6 +400,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		0
 	);
 	for(u32 i = 0; i < play->hitbox_count; i++){
+		continue;
 		DrawQuad(
 			batch,
 			{0},
@@ -461,9 +463,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawQuad(
 			batch,
 		   	hole_handle,
-		   	hole.position,
+		   	hole.position + V3(0, 0.2, 0),
 		   	0.5,
-			0
+			hole.rot
 		);
 	}
 		

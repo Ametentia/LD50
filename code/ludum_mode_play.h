@@ -36,6 +36,7 @@ enum Ship_Layer {
 
 struct Ship_Hole {
 	v3 position;
+	f32 rot;
 	b32 active;
 	v2 hitbox_dim;
 };
