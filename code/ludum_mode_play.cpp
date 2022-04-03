@@ -270,15 +270,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		play
 	);
 
-	DrawQuad(
-		batch,
-		{0},
-		V2(0,0.4),
-		V2(8,0.2),
-		0,
-		V4(0,0,1,1)
-	);
-
 	UpdateAnimation(&(play->anim), input->delta_time);
 	v2 player_dim = play->player.dim;
 	if(play->player.flags & Player_Flipped) {
@@ -413,27 +404,26 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
 	
-	int result = AABB(player->p, player->dim,V2(0,0.4),V2(8,0.2));
-	switch(result){
-		case bottomSide:
-			player->p.y= 0.4-((player->dim.y)/2 + 0.1);
-			player->flags|=Player_OnGround;
-			break;
-		default:
-		break;
-	}
-	if(result&bottomSide){
-		player->dp.y=0;
-	}
+	// switch(result){
+	// 	case bottomSide:
+	// 		player->p.y= 0.4-((player->dim.y)/2 + 0.1);
+	// 		player->flags|=Player_OnGround;
+	// 		break;
+	// 	default:
+	// 	break;
+	// }
+	// if(result&bottomSide){
+	// 	player->dp.y=0;
+	// }
 }
 
-function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
+function int ResolveCollision(v2 posA, v2 dimA, AABB collidable){
     rect2 a_r;
     rect2 b_r;
     a_r.min = posA - (0.5f*dimA);
     a_r.max = posA + (0.5f*dimA);
-    b_r.min = posB - (0.5f*dimB);
-    b_r.max = posB + (0.5f*dimB);
+    b_r.min = collidable.pos - (0.5f*collidable.dim);
+    b_r.max = collidable.pos + (0.5f*collidable.dim);
 
     v2 overlap;
     overlap.x =  Min(b_r.max.x, a_r.max.x) - Max(b_r.min.x, a_r.min.x);
@@ -442,7 +432,7 @@ function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
     if(overlap.x >= 0 && overlap.y >= 0){
         if(overlap.x < overlap.y){
             if(overlap.x > 0){
-                if(posA.x > posB.x){
+                if(posA.x > collidable.pos.x){
                     return leftSide;
                 }
                 else{
@@ -452,7 +442,7 @@ function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB){
         }
         else{
             if(overlap.x > 0){
-                if(posA.y > posB.y){
+                if(posA.y > collidable.pos.y){
                     return topSide;
                 }
                 else{

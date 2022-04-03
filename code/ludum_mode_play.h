@@ -50,11 +50,26 @@ enum Player_Flags {
 };
 
 enum aabbSides {
-    noCollision=0,
+    noCollision = 0,
     leftSide = 1,
     rightSide = (1 << 1),
     topSide = (1 << 2),
     bottomSide = (1 << 3)
+};
+
+enum Collision_Type{
+	Normal = 0,
+	Ladder = 1,
+	Trap_Door = (1 << 1),
+	Cannon = (1 << 2),
+	Cannon_Hole = (1 << 3),
+	Tentacles = (1 << 4)
+};
+
+struct AABB{
+	u32 flags;
+	v2 dim;
+	v2 pos;
 };
 
 struct Game_State;
@@ -93,7 +108,7 @@ struct Mode_Play {
 	Player player;
 };
 
-function int AABB(v2 posA, v2 dimA, v2 posB, v2 dimB);
+function int ResolveCollision(v2 posA, v2 dimA, AABB collidable);
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_State *state);
 
 #endif  // PLAY_H_
