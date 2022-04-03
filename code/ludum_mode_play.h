@@ -17,6 +17,10 @@
 #define PLAYER_MAX_SPEED_X (2.2f)
 #define PLAYER_MAX_SPEED_Y (4.3f)
 
+//Map
+//
+#define MAX_HITBOXES (5)
+
 struct Ship_Hole {
 	v3 position;
 	b32 active;
@@ -41,10 +45,11 @@ enum Player_Flags {
 
 enum aabbSides {
     noCollision = 0,
-    leftSide = 1,
-    rightSide = (1 << 1),
-    topSide = (1 << 2),
-    bottomSide = (1 << 3)
+	collision = 1,
+    leftSide = (1 << 1),
+    rightSide = (1 << 2),
+    topSide = (1 << 3),
+    bottomSide = (1 << 4)
 };
 
 enum Collision_Type{
@@ -60,6 +65,7 @@ struct AABB{
 	u32 flags;
 	v2 dim;
 	v2 pos;
+	v4 debugColour;
 };
 
 struct Game_State;
@@ -96,9 +102,10 @@ struct Mode_Play {
 	f32 water_level;
 	Sprite_Animation anim;
 	Player player;
+	AABB hitboxes[MAX_HITBOXES];
 };
 
-function int ResolveCollision(v2 posA, v2 dimA, AABB collidable);
+function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_State *state);
 
 #endif  // PLAY_H_
