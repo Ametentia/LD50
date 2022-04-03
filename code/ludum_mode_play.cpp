@@ -129,7 +129,6 @@ function void UpdateRenderClouds(
 	if(play->cloud_timer > CLOUD_SLIDE_TIME) {
 		play->cloud_timer = 0;
 	}
-	f32 depth = -0.4;
 	for(s32 i = CLOUD_COUNT-1; i > -1; i--) {
 		char tags[10][9] = {
 			"clouds_0",
@@ -374,6 +373,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		0
 	);
 	for(u32 i = 0; i < play->hitbox_count; i++){
+		continue;
 		DrawQuad(
 			batch,
 			{0},
@@ -392,9 +392,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	);
 
 
-    SetRenderTarget(batch, RenderTarget_Masked);
-    DrawClear(batch, V4(0, 0, 0, 0));
-	/*
+	if(play->player.p.y > 0.23) {
+		SetRenderTarget(batch, RenderTarget_Masked);
+		DrawClear(batch, V4(0, 0, 0, 0));
+	}
 	DrawQuad(
 		batch,
 	   	front_texture,
@@ -408,7 +409,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		batch,
 	   	play->front_waves,
 	   	play->front_wave_count
-	);*/
+	);
 	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
 		Ship_Hole hole = play->ship_holes[i];
 		if(!hole.active) {
@@ -426,21 +427,20 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     //v3 mp = Unproject(&batch->game_tx, input->mouse_clip);
 	v3 mp = V3(play->player.p.x, play->player.p.y, 0);
 
-    SetRenderTarget(batch, RenderTarget_Mask);
-    DrawClear(batch, V4(0, 0, 0, 0));
 
-    DrawCircle(batch, { 0 }, mp.xy, 0.95);
+	if(play->player.p.y > 0.23) {
+		SetRenderTarget(batch, RenderTarget_Mask);
+		DrawClear(batch, V4(0, 0, 0, 0));
 
-    ResolveMasks(batch, false);
+		DrawCircle(batch, { 0 }, mp.xy, 0.95);
+		ResolveMasks(batch, false);
+	}
 }
 
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_State *state){
 	f32 delta_time = input->delta_time;
 	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp = V2(0, gravity);
-	if(player->flags & Player_On_Ladder) {
-		ddp.y = 0;
-	}
 	b32 on_ground = (player->flags&Player_OnGround);
 
     // Attempt to jump. We will buffer this for an amount of time so if the player presses jump
@@ -452,6 +452,9 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 		on_ground = 0;
     }
 
+	b32 on_ladder = player->flags & Player_On_Ladder;
+	b32 up_or_down = IsPressed(input->keys[Key_S]) || IsPressed(input->keys[Key_W]);
+
     // Move left
     //
     if (JustPressed(input->keys[Key_A])) {
@@ -459,23 +462,28 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
     }
-	else if(IsPressed(input->keys[Key_A]) && !(player->flags & Player_On_Ladder)) {
+	else if(IsPressed(input->keys[Key_A]) && (!on_ladder || !up_or_down)) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags |= Player_Flipped;
+		player->flags &= ~Player_On_Ladder;
 	}
 
     // Move right
     //
 	if(JustPressed(input->keys[Key_D])) {
-		player->flags &= ~Player_On_Ladder;
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
+		player->flags &= ~Player_On_Ladder;
 	}
-    else if (IsPressed(input->keys[Key_D]) && !(player->flags & Player_On_Ladder)) {
+    else if (IsPressed(input->keys[Key_D]) && (!on_ladder || !up_or_down)) {
         ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
     }
+
+	if(player->flags & Player_On_Ladder) {
+		ddp.y = 0;
+	}
 
     // If neither left or right were pressed apply damping to the player
     //
@@ -527,7 +535,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
-	
+	b32 anyLadder = 0;
 	for(u32 i = 0; i < play->hitbox_count; i++){
 		AABB *hitbox = &(play->hitboxes[i]);
 		u32 result = ResolveCollision(player->p, player->dim, hitbox);
@@ -559,23 +567,23 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 			}
 		}
 		if(colliding && hitbox->flags & Collision_Type_Ladder) {
+			anyLadder = true;
 			hitbox->debugColour = V4(0,1,0,1);
-			if(IsPressed(input->keys[Key_W])
-					|| IsPressed(input->keys[Key_S])) {
+			if((IsPressed(input->keys[Key_W])
+					|| IsPressed(input->keys[Key_S])) 
+					&& !(player->flags & Player_On_Ladder)) {
 				player->p.x = hitbox->pos.x;
 				player->dp.x = 0;
 				player->dp.y = 0;
 				player->flags |= Player_On_Ladder;
+				player->flags |= Player_OnGround;
 			}
 			if(player->flags & Player_On_Ladder) {
 				ddp.y = 0;
 				if(IsPressed(input->keys[Key_W])) {
 					f32 move_len = delta_time * PLAYER_LADDER_CLIMB_SPEED;
 					if(player->p.y - move_len + player->dim.y/2 > hitbox->pos.y - hitbox->dim.y/2){
-						player->p.y -= delta_time * PLAYER_LADDER_CLIMB_SPEED;
-					}
-					else {
-						player->flags &= ~Player_On_Ladder;
+						player->p.y -= move_len;
 					}
 				}
 				else if(IsPressed(input->keys[Key_S])) {
@@ -583,6 +591,9 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Game_S
 				}
 			}
 		}
+	}
+	if(!anyLadder){
+		player->flags &= ~Player_On_Ladder;
 	}
 }
 
