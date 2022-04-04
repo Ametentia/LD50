@@ -180,7 +180,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
                     Ship_Hole *hole = &play->ship_holes[h];
 
 					if (!hole->active) {
-                        hole->position   = V3(hitbox_p, 3);
+                        hole->position   = V3(hitbox_p, 0.01);
                         hole->hitbox_dim = hitbox_dim;
                         hole->active     = true;
 
@@ -248,6 +248,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
 
+#define DRAW_HITBOXES 0
 #if DRAW_HITBOXES
 	for(u32 i = 0; i < play->hitbox_count; i++){
         AABB *hitbox = &play->hitboxes[i];
