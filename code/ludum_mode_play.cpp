@@ -648,14 +648,14 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 		switch(player->holdingFlags){
 			case Held_FullBucket:
 				player->holdingFlags = Held_Bucket;
-				if(player->p.y < 0.3){
-					play->water_level += 0.4;
+				if(player->p.y > 0.23){
+					play->water_level += 0.5;
 				}
 				break;
 			case Held_Bucket:
 				if(player->p.y >= (FindWaterLevel(play, batch))){
 					player->holdingFlags = Held_FullBucket;
-					play->water_level -= 0.4;
+					play->water_level -= 0.5;
 				}
 				break;	
 			default:
