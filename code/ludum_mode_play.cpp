@@ -506,7 +506,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 				if(play->enemies[index].health == 0){
 					index = 1 - index;
 				}
-				if(play->enemies[index].health == 0){
+				if(play->enemies[index].health != 0){
 					hitbox->debugColour = V4(0,0,1,1);
 					player->flags&= ~Player_Holding;
 					player->holdingFlags&= ~Held_CannonBall;
