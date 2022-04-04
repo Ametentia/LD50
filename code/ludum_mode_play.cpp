@@ -63,7 +63,8 @@ function void ModePlay(Game_State *state, Input *input) {
 
     Image_Handle enemy_ship   = GetImageByName(&state->assets, "enemy_periscope");
 	// cannons :)
-	Initialise(&play->cannon_anim, GetImageByName(&state->assets, "cannon_firing_sheet"), 6, 11, 1.0f / 24.0f);
+    Image_Handle enemy_ship_dead   = GetImageByName(&state->assets, "enemy_periscope_death");
+	Initialise(&play->cannon_anim, GetImageByName(&state->assets, "cannon_firing_sheet"), 6, 11, 1.0f / 12.0f);
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
@@ -72,6 +73,7 @@ function void ModePlay(Game_State *state, Input *input) {
         play->enemies[it].width           = 0;
 
         Initialise(&play->enemies[it].anim, enemy_ship, 1, 7, 1.0/14.0f);
+        Initialise(&play->enemies[it].death_anim, enemy_ship_dead, 9, 6, 1.0/14.0f);
     }
 
     Image_Handle flag_texture = GetImageByName(&state->assets, "flag_animation");
@@ -196,20 +198,32 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 			play->enemy_spawn_time = RandomF32(&(play->rand), 30, 40);
 		}
 
-		if (enemy->health <= 0) {
-			all_alive = 0;
-			continue;
-		}
-
-		enemy->time_since_shot += dt;
-		enemy->width           += 5 * dt;
-
 		v3 pos = V3(-2.0, -1.2, 0.8);
 		v2 scale = V2(Min(enemy->width, 1.8f), Min(enemy->width, 1.8f));
 		if (i % 2) {
 			pos.x   = -pos.x;
 			scale.x = -scale.x;
 		}
+		if(enemy->play_dead) {
+			UpdateAnimation(&enemy->death_anim, dt);
+			DrawAnimation(batch, &enemy->death_anim, pos, scale, 0);
+			// Minus one, we're 1 frame short on a square sprite sheet
+			u32 frames = enemy->death_anim.rows * enemy->death_anim.cols - 1;
+			if(enemy->death_anim.current_frame == frames) {
+				enemy->play_dead = 0;
+			}
+		}
+		if (enemy->health <= 0) {
+			all_alive = 0;
+			if(enemy->render_while_dead) {
+				UpdateAnimation(&enemy->anim, dt);
+				DrawAnimation(batch, &enemy->anim, pos, scale, 0);
+			}
+			continue;
+		}
+
+		enemy->time_since_shot += dt;
+		enemy->width           += 5 * dt;
 
 		UpdateAnimation(&enemy->anim, dt);
 		DrawAnimation(batch, &enemy->anim, pos, scale, 0);
@@ -346,6 +360,14 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		u32 frames = play->cannon_anim.rows * play->cannon_anim.cols;
 		if(play->cannon_anim.current_frame == frames) {
 			play->play_cannon = 0;
+			for(u32 i = 0; i < 2; i++) {
+				Enemy_Ship *enemy = &play->enemies[i];
+				if(enemy->render_while_dead) {
+					enemy->render_while_dead = 0;
+					enemy->death_anim.current_frame = 0;
+					enemy->play_dead = 1;
+				}
+			}
 		}
 	}
 
@@ -564,7 +586,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 		Dropped_Item *item = &(play->droppedItems[i]);
 		b32 result = ResolveCollision(player->p, player->dim, &item->hitbox);
 		b32 colliding = result & AABB_Sides_collision;
-		if(JustPressed(input->keys[Key_E]) && player->flags & ~Player_Holding && colliding){
+		if(JustPressed(input->keys[Key_E]) && !(player->flags & Player_Holding) && colliding){
 			player->flags|=Player_Holding;
 			player->holdingFlags|=item->type;
 			item->active = 0;
@@ -664,6 +686,9 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 					if(!(player->holdingFlags & Held_CannonBall)) {
 						break;
 					}
+					if(play->play_cannon) {
+						break;
+					}
 					u32 enemy_index = play->enemies[0].health > play->enemies[1].health;
 					if(play->enemies[enemy_index].health == 0){
 						enemy_index = 1 - enemy_index;
@@ -675,6 +700,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 						player->flags&= ~Player_Holding;
 						player->holdingFlags&= ~Held_CannonBall;
 						play->enemies[enemy_index].health--;
+						play->enemies[enemy_index].render_while_dead = 1;
 					}
 					break;
 				}

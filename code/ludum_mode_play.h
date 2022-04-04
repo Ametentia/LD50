@@ -57,6 +57,9 @@ struct Enemy_Ship {
 	f32 width;
 	Sprite_Animation anim;
 	Image_Handle border;
+	b32 render_while_dead;
+	Sprite_Animation death_anim;
+	b32 play_dead;
 };
 
 enum Player_Flags {
