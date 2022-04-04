@@ -196,7 +196,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 			play->enemy_spawn_time = RandomF32(&(play->rand), 30, 40);
 		}
 
-		v3 pos = V3(-2.0, -1.2, 0.8);
+		v3 pos = V3(-2.0, -1.2, 0);
 		v2 scale = V2(Min(enemy->width, 1.8f), Min(enemy->width, 1.8f));
 		if (i % 2) {
 			pos.x   = -pos.x;
@@ -499,6 +499,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
     SetMaskTarget(batch, RenderTarget_Mask1, true);
 	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
+	SetMaskTarget(batch, RenderTarget_Default);
+	Image_Handle filter_handle = GetImageByName(&state->assets, "filter");
+	DrawQuad(batch, filter_handle, V2(0,0), 10);
 }
 
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
