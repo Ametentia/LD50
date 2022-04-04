@@ -771,6 +771,15 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 		if(!colliding)
 			continue;
 		if(IsPressed(input->keys[Key_E])) {
+			//check if any items can be picked up (-1 means no)
+			s32 firstInactiveIndex = -1;
+			for(s32 j = 0; j < ArraySize(play->droppedItems); j++){
+				if(!play->droppedItems[j].active){
+					firstInactiveIndex = j;
+					break;
+				}
+			}
+			
 			switch(hitbox->flags) {
 				case Collision_Type_Cannon: {
 					if(!(player->holdingFlags & Held_CannonBall)) {
@@ -797,19 +806,19 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 				case Collision_Type_Cannon_Hole:
 					break;
 				case Collision_Type_Cannon_Resource:
-					if(!(player->flags & Player_Holding)) {
+					if((!(player->flags & Player_Holding)) && firstInactiveIndex >= 0 ) {
 						player->flags|=Player_Holding;
 						player->holdingFlags|=Held_CannonBall;
 					}
 					break;
 				case Collision_Type_Plank_Resource:
-					if(!(player->flags & Player_Holding)) {
+					if(!((player->flags & Player_Holding)) && firstInactiveIndex >= 0) {
 						player->flags |= Player_Holding;
 						player->holdingFlags |= Held_Plank;
 					}
 					break;
 				case Collision_Type_Spears_Resource:
-					if(!(player->flags & Player_Holding)){
+					if((!(player->flags & Player_Holding)) && firstInactiveIndex >= 0){
 						player->flags |= Player_Holding;
 						player->holdingFlags |= Held_Spear;
 					}
