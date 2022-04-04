@@ -2,6 +2,7 @@
 #define LUDUM_H_
 
 #include <base.h>
+
 #include "ludum_mode_splash.h"
 #include "ludum_mode_menu.h"
 #include "ludum_mode_play.h"
