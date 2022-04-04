@@ -337,6 +337,9 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
 			} 
 			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
 			DrawQuad(batch, imageToUse, item->hitbox.pos, item->hitbox.dim, 0);
+			if(item->hitbox.pos.y > 15){
+				item->active = false;
+			}
 		}
 	}
 }
