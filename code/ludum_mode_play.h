@@ -75,7 +75,8 @@ enum Player_Holding{
 	Held_CannonBall = (1 << 0),
 	Held_Spear = (1 << 1),
 	Held_Bucket = (1 << 2),
-	Held_Plank = (1 << 3)
+	Held_Plank = (1 << 3),
+	Held_FullBucket = (1 << 4)
 };
 
 enum AABB_Sides {
@@ -105,7 +106,8 @@ enum Item_Type{
 	Item_CannonBall = (1 << 0),
 	Item_Spear = (1 << 1),
 	Item_Bucket = (1 << 2),
-	Item_Plank = (1 << 3)
+	Item_Plank = (1 << 3),
+	Item_FullBucket = (1 << 4)
 };
 
 struct AABB{
@@ -160,6 +162,7 @@ struct Mode_Play {
 	Ship_Hole ship_holes[MAX_SHIP_HOLES];
 	f32 ship_hole_count;
 	f32 water_level;
+	v4 wColour;
 	Player player;
 	f32 cloud_timer;
 	AABB hitboxes[MAX_HITBOXES];
@@ -173,7 +176,7 @@ struct Mode_Play {
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
-function void UpdatePlayer(Mode_Play *play, Player *player, Input *input);
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch);
 function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers, u32 layer_count);
 
 #endif  // PLAY_H_
