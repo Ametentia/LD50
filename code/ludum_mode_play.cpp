@@ -295,7 +295,6 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
 	Image_Handle bucket_texture = GetImageByName(&state->assets, "bucket_empty");
 	Image_Handle fullbucket_texture = GetImageByName(&state->assets, "bucket_full");
 
-	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
 	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp = V2(0, gravity);
 	Mode_Play *play = &(state->play);
@@ -654,14 +653,14 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 		switch(player->holdingFlags){
 			case Held_FullBucket:
 				player->holdingFlags = Held_Bucket;
-				if(player->p.y < 0.3){
-					play->water_level += 0.4;
+				if(player->p.y > 0.23){
+					play->water_level += 0.5;
 				}
 				break;
 			case Held_Bucket:
 				if(player->p.y >= (FindWaterLevel(play, batch))){
 					player->holdingFlags = Held_FullBucket;
-					play->water_level -= 0.4;
+					play->water_level -= 0.5;
 				}
 				break;	
 			default:
@@ -827,7 +826,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 		}
 		if(firstInactiveIndex >= 0){
 			play->droppedItems[firstInactiveIndex].type = player->holdingFlags;
-			play->droppedItems[firstInactiveIndex].hitbox.dim = V2(0.15,0.15);
+			play->droppedItems[firstInactiveIndex].hitbox.dim = V2(0.2,0.2);
 			play->droppedItems[firstInactiveIndex].hitbox.pos = player->p;
 			play->droppedItems[firstInactiveIndex].hitbox.debugColour = V4(1,1,1,1);
 			play->droppedItems[firstInactiveIndex].active = 1;
