@@ -228,6 +228,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Image_Handle middle_texture = GetImageByName(&state->assets, "middle_layer");
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
 	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
+	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
 
 	UpdatePlayer(play, &(play->player), input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
@@ -247,6 +248,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
+	DrawQuad(batch, cannon_texture, play->hitboxes[22].pos, 1);
 
 #define DRAW_HITBOXES 0
 #if DRAW_HITBOXES
@@ -392,6 +394,12 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         }
     }
 
+	// give cannon ball while they don't exist on the ground
+	if(IsPressed(input->keys[Key_R]) && player->flags & ~Player_Holding){
+		player->flags|=Player_Holding;
+		player->holdingFlags|=Held_CannonBall;
+	}
+
     // Limit x speed
     //
     if (Abs(player->dp.x) > PLAYER_MAX_SPEED_X) {
@@ -488,6 +496,21 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 				}
 				else if (IsPressed(input->keys[Key_S])) {
 					player->p.y += delta_time * PLAYER_LADDER_CLIMB_SPEED;
+				}
+			}
+		}
+		if(colliding && (hitbox->flags & Collision_Type_Cannon)){
+			hitbox->debugColour = V4(0,1,0,1);
+			if(IsPressed(input->keys[Key_F]) && player->holdingFlags & Held_CannonBall){
+				u32 index = play->enemies[0].health > play->enemies[1].health;
+				if(play->enemies[index].health == 0){
+					index = 1 - index;
+				}
+				if(play->enemies[index].health != 0){
+					hitbox->debugColour = V4(0,0,1,1);
+					player->flags&= ~Player_Holding;
+					player->holdingFlags&= ~Held_CannonBall;
+					play->enemies[index].health--;
 				}
 			}
 		}
