@@ -1,4 +1,4 @@
-function void AddHitBox(
+function AABB* AddHitBox(
 	Mode_Play *play,
 	v2 pos,
 	v2 dim,
@@ -9,6 +9,7 @@ function void AddHitBox(
 	play->hitboxes[play->hitbox_count].flags = flags;
 	play->hitboxes[play->hitbox_count].debugColour = V4(1,1,1,1);
 	play->hitbox_count = play->hitbox_count+1;
+	return &(play->hitboxes[play->hitbox_count-1]);
 }
 function void BuildWorldHitboxes(Mode_Play *play) {
 	// above deck floor left
@@ -26,12 +27,13 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		Collision_Type_Normal
 	);
 	// above deck floor trap door
-	AddHitBox(
+	AABB *trap_door = AddHitBox(
 		play,
 	 	V2(-0.5,0.38f),
 		V2(0.45, 0.1f),
 		Collision_Type_Trap_Door
 	);
+	play->trap_doors[0] = trap_door;
 	// First ladder
 	AddHitBox(
 		play,
@@ -82,12 +84,13 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		Collision_Type_Normal
 	);
 	// above deck floor trap door
-	AddHitBox(
+	trap_door = AddHitBox(
 		play,
 	 	V2(1.6, 1),
 		V2(0.45, 0.1f),
 		Collision_Type_Trap_Door
 	);
+	play->trap_doors[1] = trap_door;
 	// second ladder
 	AddHitBox(
 		play,
@@ -103,12 +106,13 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		Collision_Type_Normal
 	);
 	// middle deck floor trap door
-	AddHitBox(
+	trap_door = AddHitBox(
 		play,
 	 	V2(-0.7, 1.7),
 		V2(0.45, 0.1f),
 		Collision_Type_Trap_Door
 	);
+	play->trap_doors[2] = trap_door;
 	// middle deck floor right
 	AddHitBox(
 		play,
@@ -137,17 +141,24 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);
-	// Right wall
+	// Right wall top
+	AddHitBox(
+		play,
+	 	V2(3.4, 1),
+		V2(0.2, 1.5),
+		Collision_Type_Normal
+	);
+	// Right wall mid
 	AddHitBox(
 		play,
 	 	V2(3.1, 1.7),
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);
-	// Right wall
+	// Right wall bottom
 	AddHitBox(
 		play,
-	 	V2(2.3, 2.2),
+	 	V2(2.3, 2.4),
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);

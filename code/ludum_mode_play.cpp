@@ -227,6 +227,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Image_Handle back_texture   = GetImageByName(&state->assets, "back_layer");
     Image_Handle middle_texture = GetImageByName(&state->assets, "middle_layer");
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
+	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
 
 	UpdatePlayer(play, &(play->player), input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
@@ -237,19 +238,36 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(batch, back_texture,   V3(0, 0.2, 0), 9.3, 0);
 	DrawQuad(batch, middle_texture, V3(0, 0.2, 0), 9.3, 0);
 
+	DrawQuad(batch, ladder_texture, play->hitboxes[3].pos,  V2(0.3, 1));
+	DrawQuad(batch, ladder_texture, play->hitboxes[11].pos, V2(0.3, 1));
+	DrawQuad(batch, ladder_texture, play->hitboxes[15].pos, V2(0.3, 1));
+
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
 
 	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
 
+#if DRAW_HITBOXES
 	for(u32 i = 0; i < play->hitbox_count; i++){
         AABB *hitbox = &play->hitboxes[i];
 		DrawQuad(batch, { 0 }, hitbox->pos, hitbox->dim, 0, hitbox->debugColour);
 	}
+#endif
 
-	DrawAnimation(batch, &player->anim, player->p, player_dim, 0);
+	for (u32 i = 0; i < 3; i++) {
+		AABB *hitbox = play->trap_doors[i];
 
+		b32 open = hitbox->flags & Collision_Type_Was_On_Ladder;
+
+        Image_Handle handle;
+		if (open) { handle = GetImageByName(&state->assets, "trapdoor_open");   }
+        else      { handle = GetImageByName(&state->assets, "trapdoor_closed"); }
+
+		DrawQuad(batch, handle, hitbox->pos - V2(0, hitbox->dim.y), 0.4);
+	}
+
+	DrawAnimation(batch, &player->anim, player->p, player_dim);
 	UpdateRenderEnemyShip(input->delta_time, batch, play);
 
 	if (player->p.y > 0.23) {
@@ -259,14 +277,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
 
-	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
-
+    Image_Handle hole_texture = GetImageByName(&state->assets, "hole");
 	for (u32 i = 0; i < MAX_SHIP_HOLES; i++) {
 		Ship_Hole *hole = &play->ship_holes[i];
 		if (!hole->active) { continue; }
 
-		DrawQuad(batch, { 0 }, hole->position, hole->hitbox_dim);
+		DrawQuad(batch, hole_texture, hole->position + V3(0, 0.2, 0), 0.5, hole->rot);
 	}
+
+	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
 
 	if (play->player.p.y > 0.23) {
 		SetRenderTarget(batch, RenderTarget_Mask);
@@ -380,13 +399,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 	for(u32 i = 0; i < play->hitbox_count; i++){
 		AABB *hitbox = &play->hitboxes[i];
 
-		u32 result   = ResolveCollision(player->p, player->dim, hitbox);
-		if((result == AABB_Sides_noCollision) && (hitbox->flags & Collision_Type_Trap_Door)) {
+		b32 result      = ResolveCollision(player->p, player->dim, hitbox);
+		b32 colliding   = result & AABB_Sides_collision;
+		b32 no_col_flag = result & ~AABB_Sides_collision;
+
+		if(!colliding && (hitbox->flags & Collision_Type_Trap_Door)) {
 			hitbox->flags &= ~Collision_Type_Was_On_Ladder;
         }
-
-		u32 colliding   = result & AABB_Sides_collision;
-		u32 no_col_flag = result & ~AABB_Sides_collision;
 
 		if (hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)) {
 			if (hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
@@ -396,14 +415,15 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 
 			if (hitbox->flags & Collision_Type_Was_On_Ladder) { continue; }
 
+            v2 half_dim = 0.5f * (hitbox->dim + player->dim);
 			switch(no_col_flag) {
 				case AABB_Sides_bottomSide: {
                     hitbox->debugColour = V4(0, 1, 0, 1);
 
 					player->dp.y    = 0;
-					player->p.y     = hitbox->pos.y - (hitbox->dim.y / 2.0f + player->dim.y / 2.0f);
+					player->p.y     = hitbox->pos.y - half_dim.y;
 					player->flags  |= Player_OnGround;
-
+					player->flags  &= ~Player_DoubleJump;
                 }
                 break;
 
@@ -411,27 +431,27 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
                     hitbox->debugColour = V4(0, 1, 0, 1);
 
 					player->dp.x = 0;
-					player->p.x  = hitbox->pos.x + (hitbox->dim.x / 2.0f + player->dim.x / 2.0f);
+					player->p.x  = hitbox->pos.x + half_dim.x;
                 }
                 break;
 				case AABB_Sides_rightSide: {
                     hitbox->debugColour = V4(0, 1, 0, 1);
 
 					player->dp.x = 0;
-					player->p.x  = hitbox->pos.x - (hitbox->dim.x / 2.0f + player->dim.x / 2.0f) ;
+					player->p.x  = hitbox->pos.x - half_dim.x;
                 }
                 break;
 				case AABB_Sides_topSide: {
                     hitbox->debugColour = V4(0, 1, 0, 1);
 
-					player->dp.y = 0;
-					player->p.x  = -(hitbox->dim.x / 2.0f + player->dim.x / 2.0f);
+					player->dp.y = 1;
+                    player->p.y  = hitbox->pos.y + half_dim.y;
                 }
                 break;
 
 				default: {} break;
-			}
-		}
+            }
+        }
 
 		if (colliding && (hitbox->flags & Collision_Type_Ladder)) {
 			anyLadder = true;

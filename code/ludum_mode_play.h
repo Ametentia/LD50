@@ -3,19 +3,19 @@
 // In world units
 //
 #define PLAYER_MAX_JUMP_HEIGHT (0.3f)
-#define PLAYER_MAX_DOUBLE_JUMP_HEIGHT (0.2f)
+#define PLAYER_MAX_DOUBLE_JUMP_HEIGHT (0.28f)
 #define PLAYER_MIN_JUMP_HEIGHT (0.1f)
 // In seconds
 //
 #define PLAYER_JUMP_APEX_TIME   (0.15f)
 #define PLAYER_JUMP_BUFFER_TIME (0.2f)
 
-#define CLOUD_SLIDE_TIME (10.0f)
+#define CLOUD_SLIDE_TIME (30.0f)
 // Movement
 //
 #define PLAYER_MOVE_SPEED (8)
 #define PLAYER_AIR_STRAFE_SPEED (6)
-#define PLAYER_DAMPING (25.0f)
+#define PLAYER_DAMPING (30.0f)
 #define PLAYER_MAX_SPEED_X (2.2f)
 #define PLAYER_MAX_SPEED_Y (4.3f)
 #define PLAYER_LADDER_CLIMB_SPEED (1)
@@ -37,6 +37,7 @@ enum Ship_Layer {
 
 struct Ship_Hole {
 	v3 position;
+	f32 rot;
 	b32 active;
 	v2 hitbox_dim;
 };
@@ -84,6 +85,7 @@ struct AABB{
 	v4 debugColour;
 };
 
+
 struct Game_State;
 
 struct Player{
@@ -128,6 +130,7 @@ struct Mode_Play {
 	u32 hitbox_count;
 	Sprite_Animation ship_mast_1;
 	Sprite_Animation ship_mast_2;
+	AABB *trap_doors[3];
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
