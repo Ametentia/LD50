@@ -36,6 +36,25 @@ function void ModePlay(Game_State *state, Input *input) {
 	player->p      = V2(0.0f, -0.5f);
 	player->dim    = V2(0.2f,  0.2f);
 
+	play->droppedItems[0].active = 1;
+	play->droppedItems[0].type = Item_Bucket;
+	play->droppedItems[0].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[0].hitbox.pos = V2(0.2, -1);
+	play->droppedItems[1].active = 1;
+	play->droppedItems[1].type = Item_Bucket;
+	play->droppedItems[1].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[1].hitbox.pos = V2(0, -1);
+	play->droppedItems[2].active = 1;
+	play->droppedItems[2].type = Item_Bucket;
+	play->droppedItems[2].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[2].hitbox.pos = V2(0.4, -1);
+	play->droppedItems[3].active = 1;
+	play->droppedItems[3].type = Item_Bucket;
+	play->droppedItems[3].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[3].hitbox.pos = V2(0.6, -1);
+	
+	
+
 	Initialise(&player->anim, GetImageByName(&state->assets, "skipper_walking"), 1, 8, 1.0f / 12.0f);
 
     // Setup enemy ships
@@ -254,6 +273,10 @@ function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers
 }
 
 function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
+	Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
+	// Image_Handle spear_texture = GetImageByName(&state->assets, "");
+	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
+	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
 	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp = V2(0, gravity);
 	Mode_Play *play = &(state->play);
@@ -279,7 +302,7 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
 				}
 			}
 			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
-			DrawQuad(batch, {0}, item->hitbox.pos, item->hitbox.dim, 0, item->hitbox.debugColour);
+			DrawQuad(batch, cannonball_texture, item->hitbox.pos, item->hitbox.dim, 0);
 		}
 	}
 }
@@ -307,6 +330,8 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
 	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
 	Image_Handle cannon_stack_texture = GetImageByName(&state->assets, "cannonballs");
+	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
+	Image_Handle spearBarrel_texture = GetImageByName(&state->assets, "spear_barrel");
 
 	UpdatePlayer(play, &(play->player), input);
 	UpdateShipHoles(state, input);
@@ -325,10 +350,14 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		}
 	}
 
+	// ladders
 	DrawQuad(batch, ladder_texture, play->hitboxes[3].pos,  V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[11].pos, V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[15].pos, V2(0.3, 1));
 
+	// spear barrel
+	DrawQuad(batch, spearBarrel_texture, play->hitboxes[25].pos, play->hitboxes[25].dim, 0);
+	
 	UpdateDroppedItems(state, input->delta_time, batch);
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
