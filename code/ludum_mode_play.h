@@ -11,6 +11,11 @@
 #define PLAYER_JUMP_BUFFER_TIME (0.2f)
 
 #define CLOUD_SLIDE_TIME (30.0f)
+#define SHIP_HOLE_FIX_TIME (1.0f)
+
+// In World units / second
+//
+#define WATER_RISE_RATE_PER_HOLE (0.01f)
 // Movement
 //
 #define PLAYER_MOVE_SPEED (8)
@@ -38,6 +43,7 @@ enum Ship_Layer {
 struct Ship_Hole {
 	v3 position;
 	f32 rot;
+	f32 timer;
 	b32 active;
 	v2 hitbox_dim;
 };
@@ -56,7 +62,8 @@ enum Player_Flags {
     Player_DoubleJump = (1 << 1),
 	Player_Holding	  = (1 << 2),
 	Player_Flipped	  = (1 << 3),
-	Player_On_Ladder  = (1 << 4)
+	Player_On_Ladder  = (1 << 4),
+    Player_Idle       = (1 << 5)
 };
 
 enum Player_Holding{
@@ -139,6 +146,7 @@ struct Mode_Play {
 	u32 hitbox_count;
 	Sprite_Animation ship_mast_1;
 	Sprite_Animation ship_mast_2;
+	b32 game_over;
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);

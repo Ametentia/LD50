@@ -40,14 +40,14 @@ function void ModePlay(Game_State *state, Input *input) {
 
     // Setup enemy ships
     //
-	play->enemy_spawn_time    = 10;
+	play->enemy_spawn_time    = 1;
 
     Image_Handle enemy_ship   = GetImageByName(&state->assets, "badship");
     Image_Handle enemy_border = GetImageByName(&state->assets, "enemy_border");
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
-        play->enemies[it].fire_interval   = 10.0f;
+        play->enemies[it].fire_interval   = 1.0f;
         play->enemies[it].time_since_shot = 0;
         play->enemies[it].width           = 0;
         play->enemies[it].border          = enemy_border;
@@ -110,6 +110,61 @@ function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 	}
 }
 
+function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
+	Mode_Play *play = &state->play;
+	v2 screen_bounds = (GetCameraFrustum(&(batch->game_tx)).max - GetCameraFrustum(&(batch->game_tx)).min).xy;
+	f32 offset = Lerp(-9.3f, 0, play->cloud_timer / CLOUD_SLIDE_TIME);
+	v3 pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08, 0.01f);
+    Image_Handle water_top = GetImageByName(&state->assets, "water_level");
+    Image_Handle water_col = GetImageByName(&state->assets, "water_colour");
+	DrawQuad(batch, water_top, pos, 9.3);
+	offset = Lerp(0, 9.3f, play->cloud_timer / CLOUD_SLIDE_TIME);
+	pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08f, 0.01f);
+	DrawQuad(batch, water_top, pos, 9.3);
+	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.01), 9.3);
+}
+
+function void UpdateShipHoles(Draw_Batch *batch, Game_State *state, Input *input) {
+	Mode_Play *play = &state->play;
+	Player *player = &(play->player);
+	f64 delta_time = input->delta_time;
+	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		// Decrease the timer on the first hole
+		// which is colliding with the player
+		// if they are holding E
+		Ship_Hole *hole = &(play->ship_holes[i]);
+		if(!hole->active)
+			continue;
+		AABB hitbox = {};
+		hitbox.pos = V2(hole->position.x, hole->position.y);
+		hitbox.dim = hole->hitbox_dim;
+		u32 result = ResolveCollision(player->p, player->dim, &hitbox);
+		b32 colliding = result & AABB_Sides_collision;
+		b32 player_holding = player->flags & Player_Holding;
+		b32 player_has_plank = player->holdingFlags & Held_Plank;
+		if(IsPressed(input->keys[Key_E]) && colliding && player_has_plank && player_holding) {
+			hole->timer -= delta_time;
+			break;
+		}
+	}
+	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		Ship_Hole *hole = &(play->ship_holes[i]);
+		if(!hole->active)
+			continue;
+		play->water_level += WATER_RISE_RATE_PER_HOLE * delta_time;
+		if(play->water_level >= 2.28) {
+			play->game_over = 1;
+		}
+		play->water_level = Min(play->water_level, 2.28);
+		if(hole->timer < 0) {
+			hole->active = 0;
+			player->holdingFlags &= ~Held_Plank;
+			player->flags &= ~Player_Holding;
+			play->ship_hole_count--;
+		}
+	}
+}
+
 function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) {
 	b32 all_alive = 1;
 
@@ -120,7 +175,6 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 			play->time_since_enemy = 0;
 			enemy->health = 3;
 			play->enemy_spawn_time = RandomF32(&(play->rand), 20, 35);
-			printf("Next spawn in %f\n", play->enemy_spawn_time);
 		}
 
 		if (enemy->health <= 0) {
@@ -155,17 +209,17 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 				switch (ship_layer) {
 					case Deck_Bottom: {
 					    hitbox_p.x = RandomF32(&play->rand, -1.9, 1.7);
-						hitbox_p.y = 1.63;
+						hitbox_p.y = 2.2;
                     }
                     break;
 					case Deck_Middle: {
 						hitbox_p.x = RandomF32(&play->rand, -2.1, 2.1);
-						hitbox_p.y = 1.1;
+						hitbox_p.y = 1.5;
                     }
                     break;
 					case Deck_Upper: {
 						hitbox_p.x = RandomF32(&(play->rand), -2.1, 2.3);
-						hitbox_p.y = 0.5;
+						hitbox_p.y = 0.7;
                     }
                     break;
 				};
@@ -174,9 +228,10 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
                     Ship_Hole *hole = &play->ship_holes[h];
 
 					if (!hole->active) {
-                        hole->position   = V3(hitbox_p, 0.01);
+                        hole->position   = V3(hitbox_p, 0.03);
                         hole->hitbox_dim = hitbox_dim;
                         hole->active     = true;
+						hole->timer = SHIP_HOLE_FIX_TIME;
 
                         play->ship_hole_count++;
 						break;
@@ -206,6 +261,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Player *player = &play->player;
 	UpdateAnimation(&player->anim, input->delta_time);
 
+
 	UpdateAnimation(&play->ship_mast_1, input->delta_time);
 	UpdateAnimation(&play->ship_mast_2, input->delta_time);
 
@@ -225,6 +281,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
 
 	UpdatePlayer(play, &(play->player), input);
+	UpdateShipHoles(batch, state, input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
 
 	UpdateRenderClouds(input->delta_time, batch, state);
@@ -244,7 +301,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
 	DrawQuad(batch, cannon_texture, play->hitboxes[22].pos, 1);
 
-#define DRAW_HITBOXES 1
+#define DRAW_HITBOXES 0
 #if DRAW_HITBOXES
 	for(u32 i = 0; i < play->hitbox_count; i++){
         AABB *hitbox = &play->hitboxes[i];
@@ -274,7 +331,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawQuad(batch, handle, hitbox->pos - V2(offsetX, hitbox->dim.y+offsetY), 0.4);
 	}
 
-	DrawAnimation(batch, &player->anim, player->p, player_dim);
+	if(!(player->flags & Player_Idle)) {
+		DrawAnimation(batch, &player->anim, player->p, player_dim);
+	}
+	else {
+		Image_Handle handle = GetImageByName(&state->assets, "skipper_still");
+		player->anim.current_frame = 0;
+		DrawQuad(batch, handle, player->p, player_dim);
+	}
+	RenderWaterLevel(batch, state);
 	UpdateRenderEnemyShip(input->delta_time, batch, play);
 
 	if (player->p.y > 0.23) {
@@ -282,17 +347,17 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawClear(batch, V4(0, 0, 0, 0));
 	}
 
-	DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
+	DrawQuad(batch, front_texture, V3(0, 0.2, 0.02), 9.3);
 
     Image_Handle hole_texture = GetImageByName(&state->assets, "hole");
 	for (u32 i = 0; i < MAX_SHIP_HOLES; i++) {
 		Ship_Hole *hole = &play->ship_holes[i];
 		if (!hole->active) { continue; }
 
-		DrawQuad(batch, hole_texture, hole->position + V3(0, 0.2, 0), 0.5, hole->rot);
+		DrawQuad(batch, hole_texture, hole->position, 0.5, hole->rot);
 	}
 
-	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
+	//UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
 
 	if (play->player.p.y > 0.23) {
 		SetRenderTarget(batch, RenderTarget_Mask);
@@ -328,11 +393,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
     }
 	else if(IsPressed(input->keys[Key_A]) && (!on_ladder || !up_or_down)) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
 	}
 
     // Move right
@@ -341,11 +408,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
 	}
     else if (IsPressed(input->keys[Key_D]) && (!on_ladder || !up_or_down)) {
         ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
     }
 
 	if(player->flags & Player_On_Ladder) {
@@ -356,6 +425,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
     //
     if (IsZero(ddp.x)) {
         player->dp.x *= (1.0f / (1 + (PLAYER_DAMPING * delta_time)));
+		player->flags |= Player_Idle;
     }
 
     if ((input->time - player->last_jump_time) <= PLAYER_JUMP_BUFFER_TIME) {
