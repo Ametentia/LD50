@@ -8,7 +8,7 @@ function void ModePlay(Game_State *state, Input *input) {
     // Setup back waves
 	play->back_wave_count = 1;
 
-	play->back_waves[0].position = V3(0, -0.2f, -0.3f);
+	play->back_waves[0].position = V3(0, -0.2f, 0.0f);
 	play->back_waves[0].radius   = 0.5f;
 	play->back_waves[0].angle    = 270;
 	play->back_waves[0].speed    = 280;
@@ -18,13 +18,13 @@ function void ModePlay(Game_State *state, Input *input) {
     //
 	play->front_wave_count = 2;
 
-	play->front_waves[0].position = V3(0, -0.1f, 0.15f);
+	play->front_waves[0].position = V3(0, -0.1f, 0.0f);
 	play->front_waves[0].radius   = 0.3f;
 	play->front_waves[0].angle    = 180;
 	play->front_waves[0].speed    = 360;
 	play->front_waves[0].texture  = GetImageByName(&state->assets, "wave_1");
 
-	play->front_waves[1].position = V3(0, 0, 0.3f);
+	play->front_waves[1].position = V3(0, 0, 0.0f);
 	play->front_waves[1].radius   = 0.2f;
 	play->front_waves[1].angle    = 0;
 	play->front_waves[1].speed    = 380;
@@ -180,7 +180,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
                     Ship_Hole *hole = &play->ship_holes[h];
 
 					if (!hole->active) {
-                        hole->position   = V3(hitbox_p, 0.01);
+                        hole->position   = V3(hitbox_p);
                         hole->hitbox_dim = hitbox_dim;
                         hole->active     = true;
 
@@ -218,6 +218,21 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Draw_Batch _batch = {};
     Draw_Batch *batch = &_batch;
 
+    // Background
+    // Clouds
+    // Background wave
+    // Ship background
+    // Ship middle
+    // Ship masts
+    // Cannon, reserves, barrels etc.
+    //
+    // Ship water  [ship mask]
+    // Ship front  [circle mask]
+    // Ship holes  [not masked]
+    // Front waves [circle mask]
+    //
+    // UI Enemy ships
+    //
     Initialise(batch, &state->assets, renderer_buffer);
 
     SetCameraTransform(batch, 0, V3(1, 0, 0), V3(0, 1, 0), V3(0, 0, 1), V3(0, 0, 15));
@@ -282,30 +297,37 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	UpdateRenderEnemyShip(input->delta_time, batch, play);
 
 	if (player->p.y > 0.23) {
-		SetRenderTarget(batch, RenderTarget_Masked);
+		SetRenderTarget(batch, RenderTarget_Mask0);
+        DrawClear(batch, V4(0, 0, 0, 0));
+
+        DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
+
+        SetMaskTarget(batch, RenderTarget_Mask0);
+
+		SetRenderTarget(batch, RenderTarget_Mask1);
 		DrawClear(batch, V4(0, 0, 0, 0));
+
+		DrawCircle(batch, { 0 }, player->p, 0.95);
+
+        SetMaskTarget(batch, RenderTarget_Mask1, true);
 	}
 
+    SetRenderTarget(batch, RenderTarget_Default);
+
 	DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
+
+    SetMaskTarget(batch, RenderTarget_Default);
 
     Image_Handle hole_texture = GetImageByName(&state->assets, "hole");
 	for (u32 i = 0; i < MAX_SHIP_HOLES; i++) {
 		Ship_Hole *hole = &play->ship_holes[i];
 		if (!hole->active) { continue; }
 
-		DrawQuad(batch, hole_texture, hole->position + V3(0, 0.2, 0), 0.5, hole->rot);
+		DrawQuad(batch, hole_texture, hole->position.xy + V2(0, 0.2), 0.5, hole->rot);
 	}
 
+    SetMaskTarget(batch, RenderTarget_Mask1, true);
 	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
-
-	if (play->player.p.y > 0.23) {
-		SetRenderTarget(batch, RenderTarget_Mask);
-		DrawClear(batch, V4(0, 0, 0, 0));
-
-		DrawCircle(batch, { 0 }, player->p, 0.95);
-
-		ResolveMasks(batch, false);
-	}
 }
 
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
