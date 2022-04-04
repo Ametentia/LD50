@@ -57,7 +57,7 @@ function void ModePlay(Game_State *state, Input *input) {
 
     // Setup enemy ships
     //
-	play->enemy_spawn_time    = 10;
+	play->enemy_spawn_time    = 1;
 
     Image_Handle enemy_ship   = GetImageByName(&state->assets, "enemy_periscope");
 	// cannons :)
@@ -66,7 +66,7 @@ function void ModePlay(Game_State *state, Input *input) {
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
-        play->enemies[it].fire_interval   = 10.0f;
+        play->enemies[it].fire_interval   = 1.0f;
         play->enemies[it].time_since_shot = 0;
         play->enemies[it].width           = 0;
 
@@ -421,7 +421,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	// spear barrel
 	DrawQuad(batch, spearBarrel_texture, play->hitboxes[25].pos, play->hitboxes[25].dim, 0);
 
-	UpdateDroppedItems(state, input->delta_time, batch);
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
 
@@ -460,6 +459,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 		DrawQuad(batch, handle, hitbox->pos - V2(offsetX, hitbox->dim.y+offsetY), 0.4);
 	}
+	UpdateDroppedItems(state, input->delta_time, batch);
 
 	if(!(player->flags & Player_Idle)) {
 		DrawAnimation(batch, &player->anim, player->p, player_dim);
@@ -542,10 +542,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	SetMaskTarget(batch, RenderTarget_Default);
 	Image_Handle filter_handle = GetImageByName(&state->assets, "filter");
 	DrawQuad(batch, filter_handle, V2(0,0), 10);
+	if(play->game_over) {
+		ModeDeath(state);
+		return;
+	}
 }
 
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch) {
 	f32 delta_time = input->delta_time;
+	play->survive_time += delta_time;
 	f32 gravity    = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp         = V2(0, gravity);
 	b32 on_ground  = (player->flags&Player_OnGround);

@@ -4,6 +4,7 @@
 #include "ludum_mode_splash.cpp"
 
 #include "ludum_world_hitbox.cpp"
+#include "ludum_mode_death_scene.cpp"
 #include "ludum_mode_play.cpp"
 
 function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Buffer *renderer_buffer) {
@@ -27,6 +28,7 @@ function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Bu
 		//ModeSplash(state, input);
 		// TEMP: Remove before release
 		ModePlay(state, input);
+		//ModeDeath(state);
 	}
 
 	switch (state->game_mode) {
@@ -40,6 +42,10 @@ function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Bu
 		}
 		case GameMode_Play: {
 			UpdateRenderModePlay(state, input, renderer_buffer);
+			break;
+		}
+		case GameMode_Death: {
+			UpdateRenderModeDeath(state, input, renderer_buffer);
 			break;
 		}
 	}

@@ -15,7 +15,7 @@
 
 // In World units / second
 //
-#define WATER_RISE_RATE_PER_HOLE (0.01f)
+#define WATER_RISE_RATE_PER_HOLE (1.01f)
 // Movement
 //
 #define PLAYER_MOVE_SPEED (8)
@@ -173,6 +173,7 @@ struct Mode_Play {
 	Sprite_Animation cannon_anim;
 	b32 play_cannon;
 	b32 game_over;
+	f64 survive_time;
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
