@@ -129,18 +129,22 @@ function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 	}
 }
 
+function f32 FindWaterLevel(Mode_Play *play, Draw_Batch *batch){
+	v2 screen_bounds = (GetCameraFrustum(&(batch->game_tx)).max - GetCameraFrustum(&(batch->game_tx)).min).xy;
+	return -(screen_bounds.y/2)-play->water_level + 0.08;
+}
+
 function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
 	Mode_Play *play = &state->play;
-	v2 screen_bounds = (GetCameraFrustum(&(batch->game_tx)).max - GetCameraFrustum(&(batch->game_tx)).min).xy;
 	f32 offset = Lerp(-9.3f, 0, play->cloud_timer / CLOUD_SLIDE_TIME);
-	v3 pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08, 0.01f);
+	v3 pos = V3(offset, FindWaterLevel(play, batch), 0.01f);
     Image_Handle water_top = GetImageByName(&state->assets, "water_level");
     Image_Handle water_col = GetImageByName(&state->assets, "water_colour");
 	DrawQuad(batch, water_top, pos.xy, 9.3);
 	offset = Lerp(0, 9.3f, play->cloud_timer / CLOUD_SLIDE_TIME);
-	pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08f, 0.01f);
+	pos = V3(offset, FindWaterLevel(play, batch), 0.01f);
 	DrawQuad(batch, water_top, pos.xy, 9.3);
-	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.0), 9.3);
+	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.01), 9.3);
 }
 
 function void UpdateShipHoles(Game_State *state, Input *input) {
@@ -287,7 +291,10 @@ function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers
 function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
 	Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
 	// Image_Handle spear_texture = GetImageByName(&state->assets, "");
-	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
+	Image_Handle plank_texture = GetImageByName(&state->assets, "plank");
+	Image_Handle bucket_texture = GetImageByName(&state->assets, "bucket_empty");
+	Image_Handle fullbucket_texture = GetImageByName(&state->assets, "bucket_full");
+
 	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
 	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp = V2(0, gravity);
@@ -313,8 +320,22 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
 					}
 				}
 			}
+			Image_Handle imageToUse = cannonball_texture;
+			switch(item->type){
+				case Item_Bucket:
+					imageToUse = bucket_texture;
+					break;
+				case Item_FullBucket:
+					imageToUse = fullbucket_texture;
+					break;
+				case Item_Plank:
+					imageToUse = plank_texture;
+					break;
+				default:
+					break;
+			} 
 			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
-			DrawQuad(batch, cannonball_texture, item->hitbox.pos, item->hitbox.dim, 0);
+			DrawQuad(batch, imageToUse, item->hitbox.pos, item->hitbox.dim, 0);
 		}
 	}
 }
@@ -358,8 +379,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
 	Image_Handle cannon_stack_texture = GetImageByName(&state->assets, "cannonballs");
 	Image_Handle spearBarrel_texture = GetImageByName(&state->assets, "spear_barrel");
+	Image_Handle wood_barrel_texture = GetImageByName(&state->assets, "wood_barrel");
 
-	UpdatePlayer(play, &(play->player), input);
+	UpdatePlayer(play, &(play->player), input, batch);
 	UpdateShipHoles(state, input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
 
@@ -388,6 +410,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(batch, ladder_texture, play->hitboxes[3].pos,  V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[11].pos, V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[15].pos, V2(0.3, 1));
+
+	// wood barrel
+	DrawQuad(batch, wood_barrel_texture, play->hitboxes[24].pos, play->hitboxes[24].dim, 0);
 
 	// spear barrel
 	DrawQuad(batch, spearBarrel_texture, play->hitboxes[25].pos, play->hitboxes[25].dim, 0);
@@ -441,10 +466,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawQuad(batch, handle, player->p, player_dim);
 	}
 	if(player->flags & Player_Holding) {
+		f32 flip = player->flags & Player_Flipped ? -1.0: 1.0;
 		switch(player->holdingFlags) {
 			case Held_CannonBall: {
     			Image_Handle cannonball = GetImageByName(&state->assets, "cannonball");
-				f32 flip = player->flags & Player_Flipped ? -1.0: 1.0;
 				DrawQuad(batch, cannonball, player->p+V2(0.1*flip, 0), 0.2);
 				break;
 			}
@@ -452,8 +477,14 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 				break;
 			}
 			case Held_Bucket: {
+    			Image_Handle bucket = GetImageByName(&state->assets, "bucket_empty");
+				DrawQuad(batch, bucket, player->p+V2(0.1*flip, 0), 0.2);
 				break;
 			}
+			case Held_FullBucket:
+				Image_Handle full_bucket = GetImageByName(&state->assets, "bucket_full");
+				DrawQuad(batch, full_bucket, player->p+V2(0.1*flip, 0), 0.2);
+				break;
 			case Held_Plank: {
 				break;
 			}
@@ -501,12 +532,18 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
 }
 
-function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch) {
 	f32 delta_time = input->delta_time;
 	f32 gravity    = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp         = V2(0, gravity);
 	b32 on_ground  = (player->flags&Player_OnGround);
 
+
+	if(player->p.y <= FindWaterLevel(play, batch)){
+		play->wColour = V4(1,0,0,1);
+	}else{
+		play->wColour = V4(1,1,1,1);
+	}
     // Attempt to jump. We will buffer this for an amount of time so if the player presses jump
     // slightly before hitting the ground it will still count
     //
@@ -606,6 +643,25 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
 	b32 anyLadder = 0;
+
+	if(JustPressed(input->keys[Key_E])){
+		switch(player->holdingFlags){
+			case Held_FullBucket:
+				player->holdingFlags = Held_Bucket;
+				if(player->p.y < 0.3){
+					play->water_level += 0.4;
+				}
+				break;
+			case Held_Bucket:
+				if(player->p.y >= (FindWaterLevel(play, batch))){
+					player->holdingFlags = Held_FullBucket;
+					play->water_level -= 0.4;
+				}
+				break;	
+			default:
+				break;
+		}
+	}
 
 	for(u32 i = 0; i < ArraySize(play->droppedItems); i++){
 		Dropped_Item *item = &(play->droppedItems[i]);
@@ -753,8 +809,8 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 					break;
 			}
 		}
-
 	}
+
 	if(IsPressed(input->keys[Key_Q]) && player->flags&Player_Holding){
 		s32 firstInactiveIndex = -1;
 		for(s32 i = 0; i < ArraySize(play->droppedItems); i++){
