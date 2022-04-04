@@ -36,23 +36,40 @@ function void ModePlay(Game_State *state, Input *input) {
 	player->p      = V2(0.0f, -0.5f);
 	player->dim    = V2(0.2f,  0.2f);
 
+	play->droppedItems[0].active = 1;
+	play->droppedItems[0].type = Item_Bucket;
+	play->droppedItems[0].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[0].hitbox.pos = V2(0.2, -1);
+	play->droppedItems[1].active = 1;
+	play->droppedItems[1].type = Item_Bucket;
+	play->droppedItems[1].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[1].hitbox.pos = V2(0, -1);
+	play->droppedItems[2].active = 1;
+	play->droppedItems[2].type = Item_Bucket;
+	play->droppedItems[2].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[2].hitbox.pos = V2(0.4, -1);
+	play->droppedItems[3].active = 1;
+	play->droppedItems[3].type = Item_Bucket;
+	play->droppedItems[3].hitbox.dim = V2(0.2,0.2);
+	play->droppedItems[3].hitbox.pos = V2(0.6, -1);
+
 	Initialise(&player->anim, GetImageByName(&state->assets, "skipper_walking"), 1, 8, 1.0f / 12.0f);
 
     // Setup enemy ships
     //
 	play->enemy_spawn_time    = 10;
 
-    Image_Handle enemy_ship   = GetImageByName(&state->assets, "badship");
-    Image_Handle enemy_border = GetImageByName(&state->assets, "enemy_border");
+    Image_Handle enemy_ship   = GetImageByName(&state->assets, "enemy_periscope");
+	// cannons :)
+	Initialise(&play->cannon_anim, GetImageByName(&state->assets, "cannon_firing_sheet"), 6, 11, 1.0f / 24.0f);
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
         play->enemies[it].fire_interval   = 10.0f;
         play->enemies[it].time_since_shot = 0;
         play->enemies[it].width           = 0;
-        play->enemies[it].border          = enemy_border;
 
-        Initialise(&play->enemies[it].anim, enemy_ship, 1, 2, 0.7f);
+        Initialise(&play->enemies[it].anim, enemy_ship, 1, 7, 1.0/14.0f);
     }
 
     Image_Handle flag_texture = GetImageByName(&state->assets, "flag_animation");
@@ -66,12 +83,6 @@ function void ModePlay(Game_State *state, Input *input) {
 
     state->game_mode = GameMode_Play;
     state->play = *play;
-}
-
-function void UpdateShipHoles(f64 dt, Draw_Batch *batch, Ship_Hole *ship_holes) {
-    (void) dt;
-    (void) batch;
-    (void) ship_holes;
 }
 
 function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
@@ -97,7 +108,7 @@ function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 			"clouds_9"
 		};
 
-		Image_Handle cloud = GetImageByName(&state->assets, tags[i]);
+        Image_Handle cloud = GetImageByName(&state->assets, tags[i]);
 
 		f32 mod    = (i % 2) ? -1 : 1;
 		f32 offset = play->cloud_timer + (CLOUD_SLIDE_TIME / CLOUD_COUNT) * i;
@@ -105,14 +116,69 @@ function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 		if (offset > CLOUD_SLIDE_TIME) { offset -= CLOUD_SLIDE_TIME; }
 
         v3 p;
-        p.x = mod * Lerp(0, 9.6f, offset / CLOUD_SLIDE_TIME);
+        p.x = mod * Lerp(0, 8.2f, offset / CLOUD_SLIDE_TIME);
         p.y = (9.6 / (CLOUD_COUNT * 2)) * i;
         p.z = -0.4;
 
-		DrawQuad(batch, cloud, p, 9.6);
+		DrawQuad(batch, cloud, p, 11.2f);
 
-        p.x = mod * Lerp(-9.6f, 0, offset / CLOUD_SLIDE_TIME);
-		DrawQuad(batch, cloud, p, 9.6);
+        p.x = mod * Lerp(-8.2f, 0, offset / CLOUD_SLIDE_TIME);
+		DrawQuad(batch, cloud, p, 11.2f);
+	}
+}
+
+function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
+	Mode_Play *play = &state->play;
+	v2 screen_bounds = (GetCameraFrustum(&(batch->game_tx)).max - GetCameraFrustum(&(batch->game_tx)).min).xy;
+	f32 offset = Lerp(-9.3f, 0, play->cloud_timer / CLOUD_SLIDE_TIME);
+	v3 pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08, 0.01f);
+    Image_Handle water_top = GetImageByName(&state->assets, "water_level");
+    Image_Handle water_col = GetImageByName(&state->assets, "water_colour");
+	DrawQuad(batch, water_top, pos.xy, 9.3);
+	offset = Lerp(0, 9.3f, play->cloud_timer / CLOUD_SLIDE_TIME);
+	pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08f, 0.01f);
+	DrawQuad(batch, water_top, pos.xy, 9.3);
+	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.0), 9.3);
+}
+
+function void UpdateShipHoles(Game_State *state, Input *input) {
+	Mode_Play *play = &state->play;
+	Player *player = &(play->player);
+	f64 delta_time = input->delta_time;
+	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		// Decrease the timer on the first hole
+		// which is colliding with the player
+		// if they are holding E
+		Ship_Hole *hole = &(play->ship_holes[i]);
+		if(!hole->active)
+			continue;
+		AABB hitbox = {};
+		hitbox.pos = V2(hole->position.x, hole->position.y);
+		hitbox.dim = hole->hitbox_dim;
+		u32 result = ResolveCollision(player->p, player->dim, &hitbox);
+		b32 colliding = result & AABB_Sides_collision;
+		b32 player_holding = player->flags & Player_Holding;
+		b32 player_has_plank = player->holdingFlags & Held_Plank;
+		if(IsPressed(input->keys[Key_E]) && colliding && player_has_plank && player_holding) {
+			hole->timer -= delta_time;
+			break;
+		}
+	}
+	for(u32 i = 0; i < MAX_SHIP_HOLES; i++) {
+		Ship_Hole *hole = &(play->ship_holes[i]);
+		if(!hole->active)
+			continue;
+		play->water_level += WATER_RISE_RATE_PER_HOLE * delta_time;
+		if(play->water_level >= 2.28) {
+			play->game_over = 1;
+		}
+		play->water_level = Min(play->water_level, 2.28);
+		if(hole->timer < 0) {
+			hole->active = 0;
+			player->holdingFlags &= ~Held_Plank;
+			player->flags &= ~Player_Holding;
+			play->ship_hole_count--;
+		}
 	}
 }
 
@@ -124,9 +190,8 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 
 		if (play->time_since_enemy > play->enemy_spawn_time && enemy->health <= 0) {
 			play->time_since_enemy = 0;
-			enemy->health = 3;
-			play->enemy_spawn_time = RandomF32(&(play->rand), 20, 35);
-			printf("Next spawn in %f\n", play->enemy_spawn_time);
+			enemy->health = RandomU64(&(play->rand), 3, 4);
+			play->enemy_spawn_time = RandomF32(&(play->rand), 30, 40);
 		}
 
 		if (enemy->health <= 0) {
@@ -137,7 +202,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 		enemy->time_since_shot += dt;
 		enemy->width           += 5 * dt;
 
-		v3 pos = V3(-2.4, -1.2, 0.8);
+		v3 pos = V3(-2.0, -1.2, 0.8);
 		v2 scale = V2(Min(enemy->width, 1.8f), Min(enemy->width, 1.8f));
 		if (i % 2) {
 			pos.x   = -pos.x;
@@ -145,8 +210,6 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 		}
 
 		UpdateAnimation(&enemy->anim, dt);
-
-		DrawQuad(batch, enemy->border, pos, scale, 0);
 		DrawAnimation(batch, &enemy->anim, pos, scale, 0);
 
 		if(enemy->time_since_shot > enemy->fire_interval) {
@@ -161,17 +224,17 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 				switch (ship_layer) {
 					case Deck_Bottom: {
 					    hitbox_p.x = RandomF32(&play->rand, -1.9, 1.7);
-						hitbox_p.y = 1.63;
+						hitbox_p.y = 2.2;
                     }
                     break;
 					case Deck_Middle: {
 						hitbox_p.x = RandomF32(&play->rand, -2.1, 2.1);
-						hitbox_p.y = 1.1;
+						hitbox_p.y = 1.5;
                     }
                     break;
 					case Deck_Upper: {
 						hitbox_p.x = RandomF32(&(play->rand), -2.1, 2.3);
-						hitbox_p.y = 0.5;
+						hitbox_p.y = 0.7;
                     }
                     break;
 				};
@@ -183,6 +246,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
                         hole->position   = V3(hitbox_p);
                         hole->hitbox_dim = hitbox_dim;
                         hole->active     = true;
+						hole->timer = SHIP_HOLE_FIX_TIME;
 
                         play->ship_hole_count++;
 						break;
@@ -203,6 +267,41 @@ function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers
 		v2 rotated = Rotate(distance, layer->angle);
 		v3 render_pos = layer->position + V3(rotated.x, rotated.y, 0);
 		DrawQuad(batch, layer->texture, render_pos, 12, 0);
+	}
+}
+
+function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
+	Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
+	// Image_Handle spear_texture = GetImageByName(&state->assets, "");
+	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
+	// Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
+	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
+    v2 ddp = V2(0, gravity);
+	Mode_Play *play = &(state->play);
+	for(u32 i = 0; i < ArraySize(play->droppedItems); i++){
+		Dropped_Item *item = &(play->droppedItems[i]);
+		if(item->active){
+			item->hitbox.pos += (item->dp * dt);
+			item->dp += (ddp * dt);
+			for(u32 j = 0; j < play->hitbox_count; j++){
+				AABB *hitbox = &(play->hitboxes[j]);
+				u32 result = ResolveCollision(item->hitbox.pos,item->hitbox.dim, hitbox);
+				b32 no_col_flag = result & ~AABB_Sides_collision;
+				if (hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)) {
+					v2 half_dim = 0.5f * (hitbox->dim + item->hitbox.dim);
+					switch(no_col_flag) {
+						case AABB_Sides_bottomSide: {
+							item->dp.y = 0;
+							item->hitbox.pos.y = hitbox->pos.y - half_dim.y;
+						}
+						break;
+						default: {} break;
+					}
+				}
+			}
+			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
+			DrawQuad(batch, cannonball_texture, item->hitbox.pos, item->hitbox.dim, 0);
+		}
 	}
 }
 
@@ -243,8 +342,12 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Image_Handle middle_texture = GetImageByName(&state->assets, "middle_layer");
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
 	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
+	Image_Handle cannon_stack_texture = GetImageByName(&state->assets, "cannonballs");
+	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
+	Image_Handle spearBarrel_texture = GetImageByName(&state->assets, "spear_barrel");
 
 	UpdatePlayer(play, &(play->player), input);
+	UpdateShipHoles(state, input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
 
 	UpdateRenderClouds(input->delta_time, batch, state);
@@ -252,16 +355,31 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	DrawQuad(batch, back_texture,   V3(0, 0.2, 0), 9.3, 0);
 	DrawQuad(batch, middle_texture, V3(0, 0.2, 0), 9.3, 0);
+	if(play->play_cannon) {
+		UpdateAnimation(&play->cannon_anim, input->delta_time);
+		u32 frames = play->cannon_anim.rows * play->cannon_anim.cols;
+		if(play->cannon_anim.current_frame == frames) {
+			play->play_cannon = 0;
+		}
+	}
 
+	// ladders
 	DrawQuad(batch, ladder_texture, play->hitboxes[3].pos,  V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[11].pos, V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[15].pos, V2(0.3, 1));
 
+	// spear barrel
+	DrawQuad(batch, spearBarrel_texture, play->hitboxes[25].pos, play->hitboxes[25].dim, 0);
+
+	UpdateDroppedItems(state, input->delta_time, batch);
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
 
 	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
+	v3 cannon_pos = V3(play->hitboxes[22].pos.x, play->hitboxes[22].pos.y, (f32)0.0);
+	DrawAnimation(batch, &play->cannon_anim, cannon_pos + V3(-0.8, -0.5, 0), V2(3, 3));
+	DrawQuad(batch, cannon_stack_texture, play->hitboxes[23].pos, 0.7f);
 
 #define DRAW_HITBOXES 0
 #if DRAW_HITBOXES
@@ -293,7 +411,34 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawQuad(batch, handle, hitbox->pos - V2(offsetX, hitbox->dim.y+offsetY), 0.4);
 	}
 
-	DrawAnimation(batch, &player->anim, player->p, player_dim);
+	if(!(player->flags & Player_Idle)) {
+		DrawAnimation(batch, &player->anim, player->p, player_dim);
+	}
+	else {
+		Image_Handle handle = GetImageByName(&state->assets, "skipper_still");
+		player->anim.current_frame = 0;
+		DrawQuad(batch, handle, player->p, player_dim);
+	}
+	if(player->flags & Player_Holding) {
+		switch(player->holdingFlags) {
+			case Held_CannonBall: {
+    			Image_Handle cannonball = GetImageByName(&state->assets, "cannonball");
+				f32 flip = player->flags & Player_Flipped ? -1.0: 1.0;
+				DrawQuad(batch, cannonball, player->p+V2(0.1*flip, 0), 0.2);
+				break;
+			}
+			case Held_Spear: {
+				break;
+			}
+			case Held_Bucket: {
+				break;
+			}
+			case Held_Plank: {
+				break;
+			}
+		}
+	}
+
 	UpdateRenderEnemyShip(input->delta_time, batch, play);
 
 	if (player->p.y > 0.23) {
@@ -304,10 +449,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
         SetMaskTarget(batch, RenderTarget_Mask0);
 
+        SetRenderTarget(batch, RenderTarget_Default);
+        RenderWaterLevel(batch, state);
+
 		SetRenderTarget(batch, RenderTarget_Mask1);
 		DrawClear(batch, V4(0, 0, 0, 0));
 
-		DrawCircle(batch, { 0 }, player->p, 0.95);
+        // Fog of war circle
+        //
+		DrawCircle(batch, { 0 }, player->p, 1.18);
 
         SetMaskTarget(batch, RenderTarget_Mask1, true);
 	}
@@ -323,7 +473,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		Ship_Hole *hole = &play->ship_holes[i];
 		if (!hole->active) { continue; }
 
-		DrawQuad(batch, hole_texture, hole->position.xy + V2(0, 0.2), 0.5, hole->rot);
+		DrawQuad(batch, hole_texture, hole->position, 0.5, hole->rot);
 	}
 
     SetMaskTarget(batch, RenderTarget_Mask1, true);
@@ -354,11 +504,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
     }
 	else if(IsPressed(input->keys[Key_A]) && (!on_ladder || !up_or_down)) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
 	}
 
     // Move right
@@ -367,11 +519,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
 	}
     else if (IsPressed(input->keys[Key_D]) && (!on_ladder || !up_or_down)) {
         ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
+		player->flags &= ~Player_Idle;
     }
 
 	if(player->flags & Player_On_Ladder) {
@@ -382,6 +536,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
     //
     if (IsZero(ddp.x)) {
         player->dp.x *= (1.0f / (1 + (PLAYER_DAMPING * delta_time)));
+		player->flags |= Player_Idle;
     }
 
     if ((input->time - player->last_jump_time) <= PLAYER_JUMP_BUFFER_TIME) {
@@ -414,6 +569,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         }
     }
 
+
     // Limit x speed
     //
     if (Abs(player->dp.x) > PLAYER_MAX_SPEED_X) {
@@ -429,6 +585,19 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
 	b32 anyLadder = 0;
+
+	for(u32 i = 0; i < ArraySize(play->droppedItems); i++){
+		Dropped_Item *item = &(play->droppedItems[i]);
+		b32 result = ResolveCollision(player->p, player->dim, &item->hitbox);
+		b32 colliding = result & AABB_Sides_collision;
+		if(JustPressed(input->keys[Key_E]) && player->flags & ~Player_Holding && colliding){
+			player->flags|=Player_Holding;
+			player->holdingFlags|=item->type;
+			item->active = 0;
+			break;
+		}
+	}
+
 	for(u32 i = 0; i < play->hitbox_count; i++){
 		AABB *hitbox = &play->hitboxes[i];
 
@@ -513,8 +682,74 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 				}
 			}
 		}
-	}
+		if(!colliding)
+			continue;
+		if(IsPressed(input->keys[Key_E])) {
+			switch(hitbox->flags) {
+				case Collision_Type_Cannon: {
+					if(!(player->holdingFlags & Held_CannonBall)) {
+						break;
+					}
+					u32 enemy_index = play->enemies[0].health > play->enemies[1].health;
+					if(play->enemies[enemy_index].health == 0){
+						enemy_index = 1 - enemy_index;
+					}
+					if(play->enemies[enemy_index].health != 0){
+						play->cannon_anim.current_frame = 0;
+						play->play_cannon = 1;
+						hitbox->debugColour = V4(0,0,1,1);
+						player->flags&= ~Player_Holding;
+						player->holdingFlags&= ~Held_CannonBall;
+						play->enemies[enemy_index].health--;
+					}
+					break;
+				}
+				case Collision_Type_Cannon_Hole:
+					break;
+				case Collision_Type_Cannon_Resource:
+					if(!(player->flags & Player_Holding)) {
+						player->flags|=Player_Holding;
+						player->holdingFlags|=Held_CannonBall;
+					}
+					break;
+				case Collision_Type_Plank_Resource:
+					if(!(player->flags & Player_Holding)) {
+						player->flags |= Player_Holding;
+						player->holdingFlags |= Held_Plank;
+					}
+					break;
+				case Collision_Type_Spears_Resource:
+					if(!(player->flags & Player_Holding)){
+						player->flags |= Player_Holding;
+						player->holdingFlags |= Held_Spear;
+					}
+					break;
+				default:
+					break;
+			}
+		}
 
+	}
+	if(IsPressed(input->keys[Key_Q]) && player->flags&Player_Holding){
+		s32 firstInactiveIndex = -1;
+		for(s32 i = 0; i < ArraySize(play->droppedItems); i++){
+			if(!play->droppedItems[i].active){
+				firstInactiveIndex = i;
+				break;
+			}
+		}
+		if(firstInactiveIndex >= 0){
+			play->droppedItems[firstInactiveIndex].type = player->holdingFlags;
+			play->droppedItems[firstInactiveIndex].hitbox.dim = V2(0.15,0.15);
+			play->droppedItems[firstInactiveIndex].hitbox.pos = player->p;
+			play->droppedItems[firstInactiveIndex].hitbox.debugColour = V4(1,1,1,1);
+			play->droppedItems[firstInactiveIndex].active = 1;
+			play->droppedItems[firstInactiveIndex].dp.x = player->dp.x;
+
+			player->holdingFlags = 0;
+			player->flags&= ~Player_Holding;
+		}
+	}
 	if (!anyLadder) { player->flags &= ~Player_On_Ladder; }
 }
 

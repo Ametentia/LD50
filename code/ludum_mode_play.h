@@ -11,6 +11,11 @@
 #define PLAYER_JUMP_BUFFER_TIME (0.2f)
 
 #define CLOUD_SLIDE_TIME (30.0f)
+#define SHIP_HOLE_FIX_TIME (1.0f)
+
+// In World units / second
+//
+#define WATER_RISE_RATE_PER_HOLE (0.01f)
 // Movement
 //
 #define PLAYER_MOVE_SPEED (8)
@@ -23,6 +28,8 @@
 //Map
 //
 #define MAX_HITBOXES (50)
+#define MAX_DROPPED_ITEMS (15)
+#define ITEM_DAMPING (3.0f)
 
 // In elementry units
 //
@@ -38,6 +45,7 @@ enum Ship_Layer {
 struct Ship_Hole {
 	v3 position;
 	f32 rot;
+	f32 timer;
 	b32 active;
 	v2 hitbox_dim;
 };
@@ -56,7 +64,15 @@ enum Player_Flags {
     Player_DoubleJump = (1 << 1),
 	Player_Holding	  = (1 << 2),
 	Player_Flipped	  = (1 << 3),
-	Player_On_Ladder  = (1 << 4)
+	Player_On_Ladder  = (1 << 4),
+    Player_Idle       = (1 << 5)
+};
+
+enum Player_Holding{
+	Held_CannonBall = (1 << 0),
+	Held_Spear = (1 << 1),
+	Held_Bucket = (1 << 2),
+	Held_Plank = (1 << 3)
 };
 
 enum AABB_Sides {
@@ -75,7 +91,18 @@ enum Collision_Type{
 	Collision_Type_Cannon = (1 << 3),
 	Collision_Type_Cannon_Hole = (1 << 4),
 	Collision_Type_Tentacles = (1 << 5),
-	Collision_Type_Was_On_Ladder = (1 << 6)
+	Collision_Type_Cannon_Resource = (1 << 6),
+	Collision_Type_Plank_Resource = (1 << 7),
+	Collision_Type_Was_On_Ladder = (1 << 8),
+	Collision_Type_Spears_Resource = (1 << 9),
+	Collision_Type_Dropped_Item = (1 << 10)
+};
+
+enum Item_Type{
+	Item_CannonBall = (1 << 0),
+	Item_Spear = (1 << 1),
+	Item_Bucket = (1 << 2),
+	Item_Plank = (1 << 3)
 };
 
 struct AABB{
@@ -85,6 +112,12 @@ struct AABB{
 	v4 debugColour;
 };
 
+struct Dropped_Item{
+	u32 type;
+	AABB hitbox;
+	v2 dp;
+	b32 active;
+};
 
 struct Game_State;
 
@@ -92,7 +125,7 @@ struct Player{
 	Sprite_Animation anim;
 
 	u32 flags;
-
+	u32 holdingFlags;
     f32 last_jump_time;
     f32 last_on_ground_time;
 
@@ -127,9 +160,13 @@ struct Mode_Play {
 	Player player;
 	f32 cloud_timer;
 	AABB hitboxes[MAX_HITBOXES];
+	Dropped_Item droppedItems[MAX_DROPPED_ITEMS];
 	u32 hitbox_count;
 	Sprite_Animation ship_mast_1;
 	Sprite_Animation ship_mast_2;
+	Sprite_Animation cannon_anim;
+	b32 play_cannon;
+	b32 game_over;
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
