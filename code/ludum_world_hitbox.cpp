@@ -1,4 +1,4 @@
-function AABB* AddHitBox(
+function void AddHitBox(
 	Mode_Play *play,
 	v2 pos,
 	v2 dim,
@@ -9,7 +9,6 @@ function AABB* AddHitBox(
 	play->hitboxes[play->hitbox_count].flags = flags;
 	play->hitboxes[play->hitbox_count].debugColour = V4(1,1,1,1);
 	play->hitbox_count = play->hitbox_count+1;
-	return &(play->hitboxes[play->hitbox_count-1]);
 }
 function void BuildWorldHitboxes(Mode_Play *play) {
 	// above deck floor left
@@ -27,13 +26,12 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		Collision_Type_Normal
 	);
 	// above deck floor trap door
-	AABB *trap_door = AddHitBox(
+	AddHitBox(
 		play,
 	 	V2(-0.5,0.38f),
 		V2(0.45, 0.1f),
 		Collision_Type_Trap_Door
 	);
-	play->trap_doors[0] = trap_door;
 	// First ladder
 	AddHitBox(
 		play,
@@ -84,54 +82,59 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		Collision_Type_Normal
 	);
 	// above deck floor trap door
-	trap_door = AddHitBox(
+	AddHitBox(
 		play,
 	 	V2(1.6, 1),
 		V2(0.45, 0.1f),
 		Collision_Type_Trap_Door
 	);
-	play->trap_doors[1] = trap_door;
 	// second ladder
 	AddHitBox(
 		play,
-	 	V2(1.6, 1.2f),
-		V2(0.2, 0.6f),
+	 	V2(1.6, 1.25f),
+		V2(0.2, 0.7f),
 		Collision_Type_Ladder
 	);
 	// middle deck floor left
 	AddHitBox(
 		play,
-	 	V2(-1.8 ,1.7),
+	 	V2(-1.8 ,1.8),
 		V2(1.8, 0.1),
 		Collision_Type_Normal
 	);
 	// middle deck floor trap door
-	trap_door = AddHitBox(
+	AddHitBox(
 		play,
-	 	V2(-0.7, 1.7),
+	 	V2(-0.7, 1.8),
 		V2(0.45, 0.1f),
 		Collision_Type_Trap_Door
 	);
-	play->trap_doors[2] = trap_door;
 	// middle deck floor right
 	AddHitBox(
 		play,
-	 	V2(1.4 ,1.7),
+	 	V2(1.4 ,1.8),
 		V2(3.7, 0.1),
 		Collision_Type_Normal
 	);
 	// third ladder
 	AddHitBox(
 		play,
-	 	V2(-0.7, 1.9f),
-		V2(0.2, 0.6f),
+	 	V2(-0.7, 2.05),
+		V2(0.2, 0.65f),
 		Collision_Type_Ladder
 	);
 	// bottom deck floor
 	AddHitBox(
 		play,
-	 	V2(0, 2.4),
+	 	V2(0, 2.6),
 		V2(5.6, 0.1),
+		Collision_Type_Normal
+	);
+	// front curve
+	AddHitBox(
+		play,
+	 	V2(2.2, 2.6),
+		V2(0.6, 0.6),
 		Collision_Type_Normal
 	);
 	// Left wall

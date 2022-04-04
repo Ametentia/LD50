@@ -255,16 +255,26 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	}
 #endif
 
-	for (u32 i = 0; i < 3; i++) {
-		AABB *hitbox = play->trap_doors[i];
+	for(u32 i = 0; i < play->hitbox_count; i++) {
+		AABB *hitbox = &play->hitboxes[i];
+
+		if(!(hitbox->flags & Collision_Type_Trap_Door)) { continue; }
 
 		b32 open = hitbox->flags & Collision_Type_Was_On_Ladder;
+		f32 offsetX = 0;
+		f32 offsetY = 0;
 
         Image_Handle handle;
-		if (open) { handle = GetImageByName(&state->assets, "trapdoor_open");   }
-        else      { handle = GetImageByName(&state->assets, "trapdoor_closed"); }
+		if (open) {
+			handle = GetImageByName(&state->assets, "trapdoor_open");
+			offsetY = 0.14;
+			offsetX = 0.02;
+		}
+        else {
+		    handle = GetImageByName(&state->assets, "trapdoor_closed");
+        }
 
-		DrawQuad(batch, handle, hitbox->pos - V2(0, hitbox->dim.y), 0.4);
+		DrawQuad(batch, handle, hitbox->pos - V2(offsetX, hitbox->dim.y+offsetY), 0.4);
 	}
 
 	DrawAnimation(batch, &player->anim, player->p, player_dim);
