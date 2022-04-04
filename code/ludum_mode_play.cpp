@@ -137,14 +137,14 @@ function f32 FindWaterLevel(Mode_Play *play, Draw_Batch *batch){
 function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
 	Mode_Play *play = &state->play;
 	f32 offset = Lerp(-9.3f, 0, play->cloud_timer / CLOUD_SLIDE_TIME);
-	v3 pos = V3(offset, FindWaterLevel(play, batch), 0.01f);
+	v3 pos = V3(offset, FindWaterLevel(play, batch), 0);
     Image_Handle water_top = GetImageByName(&state->assets, "water_level");
     Image_Handle water_col = GetImageByName(&state->assets, "water_colour");
 	DrawQuad(batch, water_top, pos.xy, 9.3);
 	offset = Lerp(0, 9.3f, play->cloud_timer / CLOUD_SLIDE_TIME);
-	pos = V3(offset, FindWaterLevel(play, batch), 0.01f);
+	pos = V3(offset, FindWaterLevel(play, batch), 0);
 	DrawQuad(batch, water_top, pos.xy, 9.3);
-	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.01), 9.3);
+	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0), 9.3);
 }
 
 function void UpdateShipHoles(Game_State *state, Input *input) {
@@ -481,11 +481,14 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 				DrawQuad(batch, bucket, player->p+V2(0.1*flip, 0), 0.2);
 				break;
 			}
-			case Held_FullBucket:
+			case Held_FullBucket: {
 				Image_Handle full_bucket = GetImageByName(&state->assets, "bucket_full");
 				DrawQuad(batch, full_bucket, player->p+V2(0.1*flip, 0), 0.2);
 				break;
+			}
 			case Held_Plank: {
+				Image_Handle plank = GetImageByName(&state->assets, "plank");
+				DrawQuad(batch, plank, player->p+V2(0.1*flip, 0), 0.2);
 				break;
 			}
 		}
