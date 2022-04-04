@@ -171,5 +171,6 @@ struct Mode_Play {
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input);
+function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers, u32 layer_count);
 
 #endif  // PLAY_H_

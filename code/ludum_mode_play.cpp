@@ -343,7 +343,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
 	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
 	Image_Handle cannon_stack_texture = GetImageByName(&state->assets, "cannonballs");
-	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
 	Image_Handle spearBarrel_texture = GetImageByName(&state->assets, "spear_barrel");
 
 	UpdatePlayer(play, &(play->player), input);
