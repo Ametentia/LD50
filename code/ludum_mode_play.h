@@ -59,6 +59,13 @@ enum Player_Flags {
 	Player_On_Ladder  = (1 << 4)
 };
 
+enum Player_Holding{
+	Held_CannonBall = (1 << 0),
+	Held_Spear = (1 << 1),
+	Held_Bucket = (1 << 2),
+	Held_Plank = (1 << 3)
+};
+
 enum AABB_Sides {
     AABB_Sides_noCollision = 0,
 	AABB_Sides_collision = (1 << 0),
@@ -92,7 +99,7 @@ struct Player{
 	Sprite_Animation anim;
 
 	u32 flags;
-
+	u32 holdingFlags;
     f32 last_jump_time;
     f32 last_on_ground_time;
 
