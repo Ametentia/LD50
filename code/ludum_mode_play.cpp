@@ -410,23 +410,30 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 			play->hitboxes[i].debugColour
 		);
 	}
-	for(u32 i = 0; i < 3; i++) {
-		AABB *hitbox = play->trap_doors[i];
-		b32 open = hitbox->flags & Collision_Type_Was_On_Ladder;
+	for(u32 i = 0; i < play->hitbox_count; i++) {
+		AABB hitbox = play->hitboxes[i];
+		if(!(hitbox.flags & Collision_Type_Trap_Door)){
+			continue;
+		}
+		b32 open = hitbox.flags & Collision_Type_Was_On_Ladder;
 		Image_Handle handle = GetImageByName(
 			&state->assets,
 			"trapdoor_closed"
 		);
+		f32 offsetX = 0;
+		f32 offsetY = 0;
 		if(open) {
 			handle = GetImageByName(
 				&state->assets,
 				"trapdoor_open"
 			);
+			offsetY = 0.14;
+			offsetX = 0.02;
 		}
 		DrawQuad(
 			batch,
 			handle,
-			hitbox->pos - V2(0, hitbox->dim.y),
+			hitbox.pos - V2(offsetX, hitbox.dim.y+offsetY),
 			0.4,
 			0
 		);

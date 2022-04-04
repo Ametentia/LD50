@@ -124,7 +124,6 @@ struct Mode_Play {
 	u32 hitbox_count;
 	Sprite_Animation ship_mast_1;
 	Sprite_Animation ship_mast_2;
-	AABB *trap_doors[3];
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
