@@ -68,12 +68,6 @@ function void ModePlay(Game_State *state, Input *input) {
     state->play = *play;
 }
 
-function void UpdateShipHoles(f64 dt, Draw_Batch *batch, Ship_Hole *ship_holes) {
-    (void) dt;
-    (void) batch;
-    (void) ship_holes;
-}
-
 function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 	Mode_Play *play = &state->play;
 
@@ -250,7 +244,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
 	DrawQuad(batch, cannon_texture, play->hitboxes[22].pos, 1);
 
-#define DRAW_HITBOXES 0
+#define DRAW_HITBOXES 1
 #if DRAW_HITBOXES
 	for(u32 i = 0; i < play->hitbox_count; i++){
         AABB *hitbox = &play->hitboxes[i];
@@ -394,11 +388,6 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
         }
     }
 
-	// give cannon ball while they don't exist on the ground
-	if(IsPressed(input->keys[Key_R]) && player->flags & ~Player_Holding){
-		player->flags|=Player_Holding;
-		player->holdingFlags|=Held_CannonBall;
-	}
 
     // Limit x speed
     //
@@ -499,23 +488,43 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 				}
 			}
 		}
-		if(colliding && (hitbox->flags & Collision_Type_Cannon)){
-			hitbox->debugColour = V4(0,1,0,1);
-			if(IsPressed(input->keys[Key_F]) && player->holdingFlags & Held_CannonBall){
-				u32 index = play->enemies[0].health > play->enemies[1].health;
-				if(play->enemies[index].health == 0){
-					index = 1 - index;
+		if(!colliding)
+			continue;
+		if(IsPressed(input->keys[Key_E])) {
+			switch(hitbox->flags) {
+				case Collision_Type_Cannon: {
+					if(!(player->holdingFlags & Held_CannonBall)) {
+						break;
+					}
+					u32 enemy_index = play->enemies[0].health > play->enemies[1].health;
+					if(play->enemies[enemy_index].health == 0){
+						enemy_index = 1 - enemy_index;
+					}
+					if(play->enemies[enemy_index].health != 0){
+						hitbox->debugColour = V4(0,0,1,1);
+						player->flags&= ~Player_Holding;
+						player->holdingFlags&= ~Held_CannonBall;
+						play->enemies[enemy_index].health--;
+					}
+					break;
 				}
-				if(play->enemies[index].health != 0){
-					hitbox->debugColour = V4(0,0,1,1);
-					player->flags&= ~Player_Holding;
-					player->holdingFlags&= ~Held_CannonBall;
-					play->enemies[index].health--;
-				}
+				case Collision_Type_Cannon_Hole:
+					break;
+				case Collision_Type_Cannon_Resource:
+					if(!(player->flags & Player_Holding)) {
+						player->flags|=Player_Holding;
+						player->holdingFlags|=Held_CannonBall;
+					}
+					break;
+				case Collision_Type_Plank_Resource:
+					if(!(player->flags & Player_Holding)) {
+						player->flags |= Player_Holding;
+						player->holdingFlags |= Held_Plank;
+					}
+					break;
 			}
 		}
 	}
-
 	if (!anyLadder) { player->flags &= ~Player_On_Ladder; }
 }
 

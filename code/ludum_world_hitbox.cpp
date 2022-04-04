@@ -172,4 +172,18 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		V2(0.5, 0.5),
 		Collision_Type_Cannon
 	);
+	// cannon resource
+	AddHitBox(
+		play,
+	 	V2(-2.6 , 0.7),
+		V2(0.5, 0.5),
+		Collision_Type_Cannon_Resource
+	);
+	// plank resource
+	AddHitBox(
+		play,
+	 	V2(2.8 , 0.2),
+		V2(0.5, 0.2),
+		Collision_Type_Plank_Resource
+	);
 }

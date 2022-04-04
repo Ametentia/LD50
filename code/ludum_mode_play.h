@@ -82,7 +82,9 @@ enum Collision_Type{
 	Collision_Type_Cannon = (1 << 3),
 	Collision_Type_Cannon_Hole = (1 << 4),
 	Collision_Type_Tentacles = (1 << 5),
-	Collision_Type_Was_On_Ladder = (1 << 6)
+	Collision_Type_Cannon_Resource = (1 << 6),
+	Collision_Type_Plank_Resource = (1 << 7),
+	Collision_Type_Was_On_Ladder = (1 << 8)
 };
 
 struct AABB{
