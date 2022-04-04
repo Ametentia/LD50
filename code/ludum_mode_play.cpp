@@ -40,14 +40,16 @@ function void ModePlay(Game_State *state, Input *input) {
 
     // Setup enemy ships
     //
-	play->enemy_spawn_time    = 1;
+	play->enemy_spawn_time    = 10;
 
     Image_Handle enemy_ship   = GetImageByName(&state->assets, "badship");
     Image_Handle enemy_border = GetImageByName(&state->assets, "enemy_border");
+	// cannons :)
+	Initialise(&play->cannon_anim, GetImageByName(&state->assets, "cannon_firing_sheet-sheet"), 6, 11, 1.0f / 24.0f);
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
-        play->enemies[it].fire_interval   = 1.0f;
+        play->enemies[it].fire_interval   = 10.0f;
         play->enemies[it].time_since_shot = 0;
         play->enemies[it].width           = 0;
         play->enemies[it].border          = enemy_border;
@@ -261,7 +263,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Player *player = &play->player;
 	UpdateAnimation(&player->anim, input->delta_time);
 
-
 	UpdateAnimation(&play->ship_mast_1, input->delta_time);
 	UpdateAnimation(&play->ship_mast_2, input->delta_time);
 
@@ -278,7 +279,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Image_Handle middle_texture = GetImageByName(&state->assets, "middle_layer");
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
 	Image_Handle ladder_texture = GetImageByName(&state->assets, "ladder");
-	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
+	Image_Handle cannon_stack_texture = GetImageByName(&state->assets, "cannonballs");
 
 	UpdatePlayer(play, &(play->player), input);
 	UpdateShipHoles(batch, state, input);
@@ -289,6 +290,13 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	DrawQuad(batch, back_texture,   V3(0, 0.2, 0), 9.3, 0);
 	DrawQuad(batch, middle_texture, V3(0, 0.2, 0), 9.3, 0);
+	if(play->play_cannon) {
+		UpdateAnimation(&play->cannon_anim, input->delta_time);
+		u32 frames = play->cannon_anim.rows * play->cannon_anim.cols;
+		if(play->cannon_anim.current_frame == frames) {
+			play->play_cannon = 0;
+		}
+	}
 
 	DrawQuad(batch, ladder_texture, play->hitboxes[3].pos,  V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[11].pos, V2(0.3, 1));
@@ -299,7 +307,9 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
-	DrawQuad(batch, cannon_texture, play->hitboxes[22].pos, 1);
+	v3 cannon_pos = V3(play->hitboxes[22].pos.x, play->hitboxes[22].pos.y, (f32)0.0);
+	DrawAnimation(batch, &play->cannon_anim, cannon_pos + V3(-0.8, -0.5, 0), V2(3, 3));
+	DrawQuad(batch, cannon_stack_texture, play->hitboxes[23].pos, 0.7f);
 
 #define DRAW_HITBOXES 0
 #if DRAW_HITBOXES
@@ -571,6 +581,8 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 						enemy_index = 1 - enemy_index;
 					}
 					if(play->enemies[enemy_index].health != 0){
+						play->cannon_anim.current_frame = 0;
+						play->play_cannon = 1;
 						hitbox->debugColour = V4(0,0,1,1);
 						player->flags&= ~Player_Holding;
 						player->holdingFlags&= ~Held_CannonBall;

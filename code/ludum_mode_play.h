@@ -146,6 +146,8 @@ struct Mode_Play {
 	u32 hitbox_count;
 	Sprite_Animation ship_mast_1;
 	Sprite_Animation ship_mast_2;
+	Sprite_Animation cannon_anim;
+	b32 play_cannon;
 	b32 game_over;
 };
 
