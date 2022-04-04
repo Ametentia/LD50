@@ -42,19 +42,17 @@ function void ModePlay(Game_State *state, Input *input) {
     //
 	play->enemy_spawn_time    = 10;
 
-    Image_Handle enemy_ship   = GetImageByName(&state->assets, "badship");
-    Image_Handle enemy_border = GetImageByName(&state->assets, "enemy_border");
+    Image_Handle enemy_ship   = GetImageByName(&state->assets, "enemy_periscope");
 	// cannons :)
-	Initialise(&play->cannon_anim, GetImageByName(&state->assets, "cannon_firing_sheet-sheet"), 6, 11, 1.0f / 24.0f);
+	Initialise(&play->cannon_anim, GetImageByName(&state->assets, "cannon_firing_sheet"), 6, 11, 1.0f / 24.0f);
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
         play->enemies[it].fire_interval   = 10.0f;
         play->enemies[it].time_since_shot = 0;
         play->enemies[it].width           = 0;
-        play->enemies[it].border          = enemy_border;
 
-        Initialise(&play->enemies[it].anim, enemy_ship, 1, 2, 0.7f);
+        Initialise(&play->enemies[it].anim, enemy_ship, 1, 7, 1.0/14.0f);
     }
 
     Image_Handle flag_texture = GetImageByName(&state->assets, "flag_animation");
@@ -175,8 +173,8 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 
 		if (play->time_since_enemy > play->enemy_spawn_time && enemy->health <= 0) {
 			play->time_since_enemy = 0;
-			enemy->health = 3;
-			play->enemy_spawn_time = RandomF32(&(play->rand), 20, 35);
+			enemy->health = RandomU64(&(play->rand), 3, 4);
+			play->enemy_spawn_time = RandomF32(&(play->rand), 30, 40);
 		}
 
 		if (enemy->health <= 0) {
@@ -187,7 +185,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 		enemy->time_since_shot += dt;
 		enemy->width           += 5 * dt;
 
-		v3 pos = V3(-2.4, -1.2, 0.8);
+		v3 pos = V3(-2.0, -1.2, 0.8);
 		v2 scale = V2(Min(enemy->width, 1.8f), Min(enemy->width, 1.8f));
 		if (i % 2) {
 			pos.x   = -pos.x;
@@ -195,8 +193,6 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
 		}
 
 		UpdateAnimation(&enemy->anim, dt);
-
-		DrawQuad(batch, enemy->border, pos, scale, 0);
 		DrawAnimation(batch, &enemy->anim, pos, scale, 0);
 
 		if(enemy->time_since_shot > enemy->fire_interval) {
@@ -381,6 +377,25 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		player->anim.current_frame = 0;
 		DrawQuad(batch, handle, player->p, player_dim);
 	}
+	if(player->flags & Player_Holding) {
+		switch(player->holdingFlags) {
+			case Held_CannonBall: {
+    			Image_Handle cannonball = GetImageByName(&state->assets, "cannonball");
+				f32 flip = player->flags & Player_Flipped ? -1.0: 1.0;
+				DrawQuad(batch, cannonball, player->p+V2(0.1*flip, 0), 0.2);
+				break;
+			}
+			case Held_Spear: {
+				break;
+			}
+			case Held_Bucket: {
+				break;
+			}
+			case Held_Plank: {
+				break;
+			}
+		}
+	}
 	RenderWaterLevel(batch, state);
 	UpdateRenderEnemyShip(input->delta_time, batch, play);
 
@@ -399,7 +414,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawQuad(batch, hole_texture, hole->position, 0.5, hole->rot);
 	}
 
-	//UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
+	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
 
 	if (play->player.p.y > 0.23) {
 		SetRenderTarget(batch, RenderTarget_Mask);
@@ -521,12 +536,14 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 		Dropped_Item *item = &(play->droppedItems[i]);
 		b32 result = ResolveCollision(player->p, player->dim, &item->hitbox);
 		b32 colliding = result & AABB_Sides_collision;
-		if(IsPressed(input->keys[Key_E]) && player->flags & ~Player_Holding && colliding){
+		if(JustPressed(input->keys[Key_E]) && player->flags & ~Player_Holding && colliding){
 			player->flags|=Player_Holding;
 			player->holdingFlags|=item->type;
 			item->active = 0;
+			break;
 		}
 	}
+
 	for(u32 i = 0; i < play->hitbox_count; i++){
 		AABB *hitbox = &play->hitboxes[i];
 

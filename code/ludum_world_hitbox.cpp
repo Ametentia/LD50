@@ -21,7 +21,7 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 	// above deck floor right
 	AddHitBox(
 		play,
-	 	V2(1.45,0.38f),
+	 	V2(1.5,0.38f),
 		V2(3.4f, 0.1f),
 		Collision_Type_Normal
 	);
@@ -161,7 +161,7 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 	// Right wall bottom
 	AddHitBox(
 		play,
-	 	V2(2.3, 2.4),
+	 	V2(2.3, 2.6),
 		V2(0.2, 1.5),
 		Collision_Type_Normal
 	);
