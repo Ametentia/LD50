@@ -186,4 +186,11 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 		V2(0.5, 0.2),
 		Collision_Type_Plank_Resource
 	);
+	// Spears resource
+	AddHitBox(
+		play,
+		V2(2.7 ,1.4),
+		V2(0.4,0.6),
+		Collision_Type_Spears_Resource
+	);
 }

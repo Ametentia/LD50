@@ -28,6 +28,8 @@
 //Map
 //
 #define MAX_HITBOXES (50)
+#define MAX_DROPPED_ITEMS (15)
+#define ITEM_DAMPING (3.0f)
 
 // In elementry units
 //
@@ -91,7 +93,16 @@ enum Collision_Type{
 	Collision_Type_Tentacles = (1 << 5),
 	Collision_Type_Cannon_Resource = (1 << 6),
 	Collision_Type_Plank_Resource = (1 << 7),
-	Collision_Type_Was_On_Ladder = (1 << 8)
+	Collision_Type_Was_On_Ladder = (1 << 8),
+	Collision_Type_Spears_Resource = (1 << 9),
+	Collision_Type_Dropped_Item = (1 << 10)
+};
+
+enum Item_Type{
+	Item_CannonBall = (1 << 0),
+	Item_Spear = (1 << 1),
+	Item_Bucket = (1 << 2),
+	Item_Plank = (1 << 3)
 };
 
 struct AABB{
@@ -101,6 +112,12 @@ struct AABB{
 	v4 debugColour;
 };
 
+struct Dropped_Item{
+	u32 type;
+	AABB hitbox;
+	v2 dp;
+	b32 active;
+};
 
 struct Game_State;
 
@@ -143,6 +160,7 @@ struct Mode_Play {
 	Player player;
 	f32 cloud_timer;
 	AABB hitboxes[MAX_HITBOXES];
+	Dropped_Item droppedItems[MAX_DROPPED_ITEMS];
 	u32 hitbox_count;
 	Sprite_Animation ship_mast_1;
 	Sprite_Animation ship_mast_2;

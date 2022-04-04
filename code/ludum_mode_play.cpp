@@ -124,7 +124,7 @@ function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
 	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.01), 9.3);
 }
 
-function void UpdateShipHoles(Draw_Batch *batch, Game_State *state, Input *input) {
+function void UpdateShipHoles(Game_State *state, Input *input) {
 	Mode_Play *play = &state->play;
 	Player *player = &(play->player);
 	f64 delta_time = input->delta_time;
@@ -255,6 +255,37 @@ function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers
 	}
 }
 
+function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
+	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
+    v2 ddp = V2(0, gravity);
+	Mode_Play *play = &(state->play);
+	for(u32 i = 0; i < ArraySize(play->droppedItems); i++){
+		Dropped_Item *item = &(play->droppedItems[i]);
+		if(item->active){
+			item->hitbox.pos += (item->dp * dt);
+			item->dp += (ddp * dt);
+			for(u32 j = 0; j < play->hitbox_count; j++){
+				AABB *hitbox = &(play->hitboxes[j]);
+				u32 result = ResolveCollision(item->hitbox.pos,item->hitbox.dim, hitbox);
+				b32 no_col_flag = result & ~AABB_Sides_collision;
+				if (hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)) {
+					v2 half_dim = 0.5f * (hitbox->dim + item->hitbox.dim);
+					switch(no_col_flag) {
+						case AABB_Sides_bottomSide: {
+							item->dp.y = 0;
+							item->hitbox.pos.y = hitbox->pos.y - half_dim.y;
+						}
+						break;
+						default: {} break;
+					}
+				}
+			}
+			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
+			DrawQuad(batch, {0}, item->hitbox.pos, item->hitbox.dim, 0, item->hitbox.debugColour);
+		}
+	}
+}
+
 function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buffer *renderer_buffer) {
     Mode_Play *play = &(state->play);
 
@@ -281,7 +312,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	Image_Handle cannon_texture = GetImageByName(&state->assets, "cannon");
 
 	UpdatePlayer(play, &(play->player), input);
-	UpdateShipHoles(batch, state, input);
+	UpdateShipHoles(state, input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
 
 	UpdateRenderClouds(input->delta_time, batch, state);
@@ -294,6 +325,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(batch, ladder_texture, play->hitboxes[11].pos, V2(0.3, 1));
 	DrawQuad(batch, ladder_texture, play->hitboxes[15].pos, V2(0.3, 1));
 
+	UpdateDroppedItems(state, input->delta_time, batch);
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
 
@@ -473,7 +505,18 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
-	b32 anyLadder = 0;
+	b32 anyLadder = 0;	
+
+	for(u32 i = 0; i < ArraySize(play->droppedItems); i++){
+		Dropped_Item *item = &(play->droppedItems[i]);
+		b32 result = ResolveCollision(player->p, player->dim, &item->hitbox);
+		b32 colliding = result & AABB_Sides_collision;
+		if(IsPressed(input->keys[Key_E]) && player->flags & ~Player_Holding && colliding){
+			player->flags|=Player_Holding;
+			player->holdingFlags|=item->type;
+			item->active = 0;
+		}
+	}
 	for(u32 i = 0; i < play->hitbox_count; i++){
 		AABB *hitbox = &play->hitboxes[i];
 
@@ -592,7 +635,36 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 						player->holdingFlags |= Held_Plank;
 					}
 					break;
+				case Collision_Type_Spears_Resource:
+					if(!(player->flags & Player_Holding)){
+						player->flags |= Player_Holding;
+						player->holdingFlags |= Held_Spear;
+					}
+					break;
+				default:
+					break;
 			}
+		}
+
+	}
+	if(IsPressed(input->keys[Key_Q]) && player->flags&Player_Holding){
+		s32 firstInactiveIndex = -1;
+		for(s32 i = 0; i < ArraySize(play->droppedItems); i++){
+			if(!play->droppedItems[i].active){
+				firstInactiveIndex = i;
+				break; 
+			}
+		}
+		if(firstInactiveIndex >= 0){
+			play->droppedItems[firstInactiveIndex].type = player->holdingFlags;
+			play->droppedItems[firstInactiveIndex].hitbox.dim = V2(0.15,0.15);
+			play->droppedItems[firstInactiveIndex].hitbox.pos = player->p;
+			play->droppedItems[firstInactiveIndex].hitbox.debugColour = V4(1,1,1,1);
+			play->droppedItems[firstInactiveIndex].active = 1;		
+			play->droppedItems[firstInactiveIndex].dp.x = player->dp.x;						
+
+			player->holdingFlags = 0;
+			player->flags&= ~Player_Holding;
 		}
 	}
 	if (!anyLadder) { player->flags &= ~Player_On_Ladder; }
