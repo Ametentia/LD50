@@ -8,7 +8,7 @@ function void ModePlay(Game_State *state, Input *input) {
     // Setup back waves
 	play->back_wave_count = 1;
 
-	play->back_waves[0].position = V3(0, -0.2f, -0.3f);
+	play->back_waves[0].position = V3(0, -0.2f, 0.0f);
 	play->back_waves[0].radius   = 0.5f;
 	play->back_waves[0].angle    = 270;
 	play->back_waves[0].speed    = 280;
@@ -18,13 +18,13 @@ function void ModePlay(Game_State *state, Input *input) {
     //
 	play->front_wave_count = 2;
 
-	play->front_waves[0].position = V3(0, -0.1f, 0.15f);
+	play->front_waves[0].position = V3(0, -0.1f, 0.0f);
 	play->front_waves[0].radius   = 0.3f;
 	play->front_waves[0].angle    = 180;
 	play->front_waves[0].speed    = 360;
 	play->front_waves[0].texture  = GetImageByName(&state->assets, "wave_1");
 
-	play->front_waves[1].position = V3(0, 0, 0.3f);
+	play->front_waves[1].position = V3(0, 0, 0.0f);
 	play->front_waves[1].radius   = 0.2f;
 	play->front_waves[1].angle    = 0;
 	play->front_waves[1].speed    = 380;
@@ -52,8 +52,6 @@ function void ModePlay(Game_State *state, Input *input) {
 	play->droppedItems[3].type = Item_Bucket;
 	play->droppedItems[3].hitbox.dim = V2(0.2,0.2);
 	play->droppedItems[3].hitbox.pos = V2(0.6, -1);
-	
-	
 
 	Initialise(&player->anim, GetImageByName(&state->assets, "skipper_walking"), 1, 8, 1.0f / 12.0f);
 
@@ -112,7 +110,7 @@ function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 			"clouds_9"
 		};
 
-		Image_Handle cloud = GetImageByName(&state->assets, tags[i]);
+        Image_Handle cloud = GetImageByName(&state->assets, tags[i]);
 
 		f32 mod    = (i % 2) ? -1 : 1;
 		f32 offset = play->cloud_timer + (CLOUD_SLIDE_TIME / CLOUD_COUNT) * i;
@@ -120,14 +118,14 @@ function void UpdateRenderClouds(f64 dt, Draw_Batch *batch, Game_State *state) {
 		if (offset > CLOUD_SLIDE_TIME) { offset -= CLOUD_SLIDE_TIME; }
 
         v3 p;
-        p.x = mod * Lerp(0, 9.6f, offset / CLOUD_SLIDE_TIME);
+        p.x = mod * Lerp(0, 8.2f, offset / CLOUD_SLIDE_TIME);
         p.y = (9.6 / (CLOUD_COUNT * 2)) * i;
         p.z = -0.4;
 
-		DrawQuad(batch, cloud, p, 9.6);
+		DrawQuad(batch, cloud, p, 11.2f);
 
-        p.x = mod * Lerp(-9.6f, 0, offset / CLOUD_SLIDE_TIME);
-		DrawQuad(batch, cloud, p, 9.6);
+        p.x = mod * Lerp(-8.2f, 0, offset / CLOUD_SLIDE_TIME);
+		DrawQuad(batch, cloud, p, 11.2f);
 	}
 }
 
@@ -138,11 +136,11 @@ function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
 	v3 pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08, 0.01f);
     Image_Handle water_top = GetImageByName(&state->assets, "water_level");
     Image_Handle water_col = GetImageByName(&state->assets, "water_colour");
-	DrawQuad(batch, water_top, pos, 9.3);
+	DrawQuad(batch, water_top, pos.xy, 9.3);
 	offset = Lerp(0, 9.3f, play->cloud_timer / CLOUD_SLIDE_TIME);
 	pos = V3(offset, -(screen_bounds.y/2)-play->water_level + 0.08f, 0.01f);
-	DrawQuad(batch, water_top, pos, 9.3);
-	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.01), 9.3);
+	DrawQuad(batch, water_top, pos.xy, 9.3);
+	DrawQuad(batch, water_col, V3(0, pos.y + 2.422, 0.0), 9.3);
 }
 
 function void UpdateShipHoles(Game_State *state, Input *input) {
@@ -259,7 +257,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
                     Ship_Hole *hole = &play->ship_holes[h];
 
 					if (!hole->active) {
-                        hole->position   = V3(hitbox_p, 0.03);
+                        hole->position   = V3(hitbox_p);
                         hole->hitbox_dim = hitbox_dim;
                         hole->active     = true;
 						hole->timer = SHIP_HOLE_FIX_TIME;
@@ -333,6 +331,21 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
     Draw_Batch _batch = {};
     Draw_Batch *batch = &_batch;
 
+    // Background
+    // Clouds
+    // Background wave
+    // Ship background
+    // Ship middle
+    // Ship masts
+    // Cannon, reserves, barrels etc.
+    //
+    // Ship water  [ship mask]
+    // Ship front  [circle mask]
+    // Ship holes  [not masked]
+    // Front waves [circle mask]
+    //
+    // UI Enemy ships
+    //
     Initialise(batch, &state->assets, renderer_buffer);
 
     SetCameraTransform(batch, 0, V3(1, 0, 0), V3(0, 1, 0), V3(0, 0, 1), V3(0, 0, 15));
@@ -378,7 +391,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	// spear barrel
 	DrawQuad(batch, spearBarrel_texture, play->hitboxes[25].pos, play->hitboxes[25].dim, 0);
-	
+
 	UpdateDroppedItems(state, input->delta_time, batch);
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
@@ -446,15 +459,35 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 			}
 		}
 	}
-	RenderWaterLevel(batch, state);
+
 	UpdateRenderEnemyShip(input->delta_time, batch, play);
 
 	if (player->p.y > 0.23) {
-		SetRenderTarget(batch, RenderTarget_Masked);
+		SetRenderTarget(batch, RenderTarget_Mask0);
+        DrawClear(batch, V4(0, 0, 0, 0));
+
+        DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
+
+        SetMaskTarget(batch, RenderTarget_Mask0);
+
+        SetRenderTarget(batch, RenderTarget_Default);
+        RenderWaterLevel(batch, state);
+
+		SetRenderTarget(batch, RenderTarget_Mask1);
 		DrawClear(batch, V4(0, 0, 0, 0));
+
+        // Fog of war circle
+        //
+		DrawCircle(batch, { 0 }, player->p, 1.18);
+
+        SetMaskTarget(batch, RenderTarget_Mask1, true);
 	}
 
-	DrawQuad(batch, front_texture, V3(0, 0.2, 0.02), 9.3);
+    SetRenderTarget(batch, RenderTarget_Default);
+
+	DrawQuad(batch, front_texture, V3(0, 0.2, 0), 9.3);
+
+    SetMaskTarget(batch, RenderTarget_Default);
 
     Image_Handle hole_texture = GetImageByName(&state->assets, "hole");
 	for (u32 i = 0; i < MAX_SHIP_HOLES; i++) {
@@ -464,16 +497,8 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		DrawQuad(batch, hole_texture, hole->position, 0.5, hole->rot);
 	}
 
+    SetMaskTarget(batch, RenderTarget_Mask1, true);
 	UpdateRenderWaveList(input->delta_time, batch, play->front_waves, play->front_wave_count);
-
-	if (play->player.p.y > 0.23) {
-		SetRenderTarget(batch, RenderTarget_Mask);
-		DrawClear(batch, V4(0, 0, 0, 0));
-
-		DrawCircle(batch, { 0 }, player->p, 0.95);
-
-		ResolveMasks(batch, false);
-	}
 }
 
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
@@ -580,7 +605,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 
     player->p  += (player->dp * delta_time);
     player->dp += (ddp * delta_time);
-	b32 anyLadder = 0;	
+	b32 anyLadder = 0;
 
 	for(u32 i = 0; i < ArraySize(play->droppedItems); i++){
 		Dropped_Item *item = &(play->droppedItems[i]);
@@ -735,7 +760,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 		for(s32 i = 0; i < ArraySize(play->droppedItems); i++){
 			if(!play->droppedItems[i].active){
 				firstInactiveIndex = i;
-				break; 
+				break;
 			}
 		}
 		if(firstInactiveIndex >= 0){
@@ -743,8 +768,8 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input) {
 			play->droppedItems[firstInactiveIndex].hitbox.dim = V2(0.15,0.15);
 			play->droppedItems[firstInactiveIndex].hitbox.pos = player->p;
 			play->droppedItems[firstInactiveIndex].hitbox.debugColour = V4(1,1,1,1);
-			play->droppedItems[firstInactiveIndex].active = 1;		
-			play->droppedItems[firstInactiveIndex].dp.x = player->dp.x;						
+			play->droppedItems[firstInactiveIndex].active = 1;
+			play->droppedItems[firstInactiveIndex].dp.x = player->dp.x;
 
 			player->holdingFlags = 0;
 			player->flags&= ~Player_Holding;
