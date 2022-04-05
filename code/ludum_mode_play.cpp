@@ -5,6 +5,12 @@ function void ModePlay(Game_State *state, Input *input) {
     play->alloc     = &state->mode_arena;
 	play->rand      = RandomSeed(input->ticks);
 
+    Sound_Handle wind_handle = GetSoundByName(&state->assets, "wind");
+    play->wind = PlaySound(&state->audio_state, wind_handle, PlayingSound_Looped, V2(0.3, 0.3));
+
+    play->hits[0] = GetSoundByName(&state->assets, "hit0");
+    play->hits[1] = GetSoundByName(&state->assets, "hit1");
+
     // Setup back waves
 	play->back_wave_count = 1;
 
@@ -136,6 +142,7 @@ function f32 FindWaterLevel(Mode_Play *play, Draw_Batch *batch){
 
 function void RenderWaterLevel(Draw_Batch *batch, Game_State *state) {
 	Mode_Play *play = &state->play;
+
 	f32 offset = Lerp(-9.3f, 0, play->cloud_timer / CLOUD_SLIDE_TIME);
 	v3 pos = V3(offset, FindWaterLevel(play, batch), 0);
     Image_Handle water_top = GetImageByName(&state->assets, "water_level");
@@ -167,6 +174,12 @@ function void UpdateShipHoles(Game_State *state, Input *input) {
 		b32 player_has_plank = player->holdingFlags & Held_Plank;
 		if(IsPressed(input->keys[Key_E]) && colliding && player_has_plank && player_holding) {
 			hole->timer -= delta_time;
+
+            if (!play->fix_sound) {
+                Sound_Handle sound = GetSoundByName(&state->assets, "fix_hole");
+                play->fix_sound = PlaySound(&state->audio_state,  sound, 0, V2(0.2, 0.2));
+            }
+
 			break;
 		}
 	}
@@ -184,11 +197,13 @@ function void UpdateShipHoles(Game_State *state, Input *input) {
 			player->holdingFlags &= ~Held_Plank;
 			player->flags &= ~Player_Holding;
 			play->ship_hole_count--;
+
+            if (hole->timer <= 0) { play->fix_sound = 0; }
 		}
 	}
 }
 
-function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) {
+function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play, Audio_State *audio) {
 	b32 all_alive = 1;
 
 	for(u8 i = 0; i < ArraySize(play->enemies); i++) {
@@ -266,6 +281,9 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play) 
                         hole->active     = true;
 						hole->timer = SHIP_HOLE_FIX_TIME;
 
+                        u32 index = RandomU32(&play->rand, 0, 2);
+                        PlaySound(audio, play->hits[index], 0, V2(0.1, 0.1));
+
                         play->ship_hole_count++;
 						break;
 					}
@@ -288,13 +306,15 @@ function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers
 	}
 }
 
-function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
+function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch) {
 	Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
 	// Image_Handle spear_texture = GetImageByName(&state->assets, "");
 	Image_Handle plank_texture = GetImageByName(&state->assets, "plank");
 	Image_Handle bucket_texture = GetImageByName(&state->assets, "bucket_empty");
 	Image_Handle fullbucket_texture = GetImageByName(&state->assets, "bucket_full");
 
+    // @Todo: Wet item physics
+    //
 	f32 gravity = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
     v2 ddp = V2(0, gravity);
 	Mode_Play *play = &(state->play);
@@ -332,7 +352,7 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch){
 					break;
 				default:
 					break;
-			} 
+			}
 			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
 			DrawQuad(batch, imageToUse, item->hitbox.pos, item->hitbox.dim, 0);
 		}
@@ -380,12 +400,29 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	Image_Handle spearBarrel_texture = GetImageByName(&state->assets, "spear_barrel");
 	Image_Handle wood_barrel_texture = GetImageByName(&state->assets, "wood_barrel");
 
-	UpdatePlayer(play, &(play->player), input, batch);
+	UpdatePlayer(play, &(play->player), input, batch, state);
 	UpdateShipHoles(state, input);
 	DrawQuad(batch, background, V3(0,0,-0.5), 9.6, 0);
 
 	UpdateRenderClouds(input->delta_time, batch, state);
 	UpdateRenderWaveList(input->delta_time, batch, play->back_waves, play->back_wave_count);
+
+    if (play->water_changed) {
+        play->water_level += (play->water_dir * input->delta_time);
+
+        if (play->water_dir < 0) {
+            if (play->water_level < play->target_water_level) {
+                play->water_level   = play->target_water_level;
+                play->water_changed = false;
+            }
+        }
+        else if (play->water_dir > 0) {
+            if (play->water_level > play->target_water_level) {
+                play->water_level   = play->target_water_level;
+                play->water_changed = false;
+            }
+        }
+    }
 
 	DrawQuad(batch, back_texture,   V3(0, 0.2, 0), 9.3, 0);
 	DrawQuad(batch, middle_texture, V3(0, 0.2, 0), 9.3, 0);
@@ -403,6 +440,10 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 				}
 			}
 		}
+        else if (play->cannon_anim.current_frame == 42) {
+            Sound_Handle sound = GetSoundByName(&state->assets, "cannon_bang");
+            PlaySound(&state->audio_state, sound, 0, V2(0.1, 0.1));
+        }
 	}
 
 	// ladders
@@ -493,7 +534,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 		}
 	}
 
-	UpdateRenderEnemyShip(input->delta_time, batch, play);
+	UpdateRenderEnemyShip(input->delta_time, batch, play, &state->audio_state);
 
 	if (player->p.y > 0.23) {
 		SetRenderTarget(batch, RenderTarget_Mask0);
@@ -537,18 +578,20 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(batch, filter_handle, V2(0,0), 10);
 }
 
-function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch) {
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch, Game_State *state) {
 	f32 delta_time = input->delta_time;
 	f32 gravity    = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
-    v2 ddp         = V2(0, gravity);
 	b32 on_ground  = (player->flags&Player_OnGround);
 
+    f32 water_level = FindWaterLevel(play, batch);
+    b32 under_water = player->p.y >= water_level;
 
-	if(player->p.y <= FindWaterLevel(play, batch)){
-		play->wColour = V4(1,0,0,1);
-	}else{
-		play->wColour = V4(1,1,1,1);
-	}
+    f32 movement_multiplier = 1.0f;
+	if (under_water) { movement_multiplier = 0.1f; }
+
+    gravity *= movement_multiplier;
+    v2 ddp = V2(0, gravity);
+
     // Attempt to jump. We will buffer this for an amount of time so if the player presses jump
     // slightly before hitting the ground it will still count
     //
@@ -564,13 +607,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
     // Move left
     //
     if (JustPressed(input->keys[Key_A])) {
-        ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+        ddp.x = (on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED) * movement_multiplier;
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
 		player->flags &= ~Player_Idle;
     }
 	else if(IsPressed(input->keys[Key_A]) && (!on_ladder || !up_or_down)) {
-        ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+        ddp.x = (on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED) * movement_multiplier;
 		player->flags |= Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
 		player->flags &= ~Player_Idle;
@@ -579,13 +622,13 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
     // Move right
     //
 	if(JustPressed(input->keys[Key_D])) {
-        ddp.x = on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED;
+        ddp.x = (on_ground ? -PLAYER_MOVE_SPEED : -PLAYER_AIR_STRAFE_SPEED) * movement_multiplier;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
 		player->flags &= ~Player_Idle;
 	}
     else if (IsPressed(input->keys[Key_D]) && (!on_ladder || !up_or_down)) {
-        ddp.x = on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED;
+        ddp.x =(on_ground ? PLAYER_MOVE_SPEED : PLAYER_AIR_STRAFE_SPEED) * movement_multiplier;
 		player->flags &= ~Player_Flipped;
 		player->flags &= ~Player_On_Ladder;
 		player->flags &= ~Player_Idle;
@@ -607,7 +650,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 
         if (on_ground || double_jump) {
             if (double_jump) {
-                gravity = (2 * PLAYER_MAX_DOUBLE_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
+                gravity = movement_multiplier * (2 * PLAYER_MAX_DOUBLE_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
 
                 player->dp.y   = -Sqrt(2 * gravity * PLAYER_MAX_DOUBLE_JUMP_HEIGHT);
                 player->flags &= ~Player_DoubleJump;
@@ -649,20 +692,25 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
     player->dp += (ddp * delta_time);
 	b32 anyLadder = 0;
 
-	if(JustPressed(input->keys[Key_E])){
+	if (JustPressed(input->keys[Key_E])){
 		switch(player->holdingFlags){
 			case Held_FullBucket:
 				player->holdingFlags = Held_Bucket;
 				if(player->p.y > 0.23){
-					play->water_level += 0.5;
+					play->target_water_level = play->water_level + 0.5;
+                    play->water_dir          = 1.0f;
+                    play->water_changed      = true;
 				}
 				break;
 			case Held_Bucket:
-				if(player->p.y >= (FindWaterLevel(play, batch))){
+				if(player->p.y >= water_level) {
 					player->holdingFlags = Held_FullBucket;
-					play->water_level -= 0.5;
+
+                    play->target_water_level = play->water_level - 0.5f;
+                    play->water_dir          = -1.0f;
+                    play->water_changed      = true;
 				}
-				break;	
+				break;
 			default:
 				break;
 		}
@@ -787,6 +835,9 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 						player->holdingFlags&= ~Held_CannonBall;
 						play->enemies[enemy_index].health--;
 						play->enemies[enemy_index].render_while_dead = 1;
+
+                        Sound_Handle sound = GetSoundByName(&state->assets, "clunk");
+                        PlaySound(&state->audio_state, sound, 0, V2(0.3, 0.3));
 					}
 					break;
 				}
@@ -816,7 +867,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 		}
 	}
 
-	if(IsPressed(input->keys[Key_Q]) && player->flags&Player_Holding){
+	if (IsPressed(input->keys[Key_Q]) && player->flags&Player_Holding) {
 		s32 firstInactiveIndex = -1;
 		for(s32 i = 0; i < ArraySize(play->droppedItems); i++){
 			if(!play->droppedItems[i].active){
@@ -836,6 +887,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 			player->flags&= ~Player_Holding;
 		}
 	}
+
 	if (!anyLadder) { player->flags &= ~Player_On_Ladder; }
 }
 

@@ -153,6 +153,11 @@ struct Mode_Play {
 	u32 back_wave_count;
 	Wave_Layer back_waves[3];
 
+    b32 water_changed;
+	f32 water_level;
+    f32 target_water_level;
+    f32 water_dir;
+
 	u32 front_wave_count;
 	Wave_Layer front_waves[3];
 	Enemy_Ship enemies[2];
@@ -161,7 +166,6 @@ struct Mode_Play {
 	Random rand;
 	Ship_Hole ship_holes[MAX_SHIP_HOLES];
 	f32 ship_hole_count;
-	f32 water_level;
 	v4 wColour;
 	Player player;
 	f32 cloud_timer;
@@ -173,10 +177,17 @@ struct Mode_Play {
 	Sprite_Animation cannon_anim;
 	b32 play_cannon;
 	b32 game_over;
+
+    // Sounds
+    //
+    Playing_Sound *wind;
+    Playing_Sound *fix_sound;
+
+    Sound_Handle hits[4];
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
-function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch);
+function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch, Game_State *state);
 function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers, u32 layer_count);
 
 #endif  // PLAY_H_
