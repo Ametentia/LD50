@@ -1,4 +1,5 @@
 #include "ludum_mode_menu.h"
+#include "ludum_mode_play.h"
 
 function void ModeMenu(Game_State *state) {
     Reset(&state->mode_arena);
@@ -88,4 +89,8 @@ function void UpdateRenderModeMenu(Game_State *state, Input *input, Renderer_Buf
 	DrawQuad(batch, GetImageByName(&state->assets, "title"), V3(0, -1.3f, 1), V2(3.2,2), Sin(menu->cloud_timer) / 20.0f);
 	v2 screen_bounds = (GetCameraFrustum(&(batch->game_tx)).max - GetCameraFrustum(&(batch->game_tx)).min).xy;
 	DrawQuad(batch, GetImageByName(&state->assets, "logo"), V3((screen_bounds.x/2)-0.9f, -(screen_bounds.y/2.0f)-0.5, 1), V2(0.5,0.5));
+	DrawQuad(batch, GetImageByName(&state->assets, "play_space"), V3(0, -(screen_bounds.y/2.0f)-0.5, 1), 2);
+	if(JustPressed(input->keys[Key_Space])) {
+		ModePlay(state, input);
+	}
 }

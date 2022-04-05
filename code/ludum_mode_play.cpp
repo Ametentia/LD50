@@ -308,7 +308,7 @@ function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers
 
 function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch) {
 	Image_Handle cannonball_texture = GetImageByName(&state->assets, "cannonball");
-	// Image_Handle spear_texture = GetImageByName(&state->assets, "");
+	Image_Handle spear_texture = GetImageByName(&state->assets, "spear");
 	Image_Handle plank_texture = GetImageByName(&state->assets, "plank");
 	Image_Handle bucket_texture = GetImageByName(&state->assets, "bucket_empty");
 	Image_Handle fullbucket_texture = GetImageByName(&state->assets, "bucket_full");
@@ -350,11 +350,16 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch) {
 				case Item_Plank:
 					imageToUse = plank_texture;
 					break;
+				case Item_Spear:
+					imageToUse = spear_texture;
 				default:
 					break;
 			}
 			item->dp.x *= (1.0f / (1 + (ITEM_DAMPING * dt)));
 			DrawQuad(batch, imageToUse, item->hitbox.pos, item->hitbox.dim, 0);
+			if(item->hitbox.pos.y > 15){
+				item->active = false;
+			}
 		}
 	}
 }
@@ -457,7 +462,6 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	// spear barrel
 	DrawQuad(batch, spearBarrel_texture, play->hitboxes[25].pos, play->hitboxes[25].dim, 0);
 
-	UpdateDroppedItems(state, input->delta_time, batch);
 	v2 player_dim = player->dim;
 	if(player->flags & Player_Flipped) { player_dim.x = -player_dim.x; }
 
@@ -496,6 +500,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 		DrawQuad(batch, handle, hitbox->pos - V2(offsetX, hitbox->dim.y+offsetY), 0.4);
 	}
+	UpdateDroppedItems(state, input->delta_time, batch);
 
 	if(!(player->flags & Player_Idle)) {
 		DrawAnimation(batch, &player->anim, player->p, player_dim);
@@ -514,6 +519,8 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 				break;
 			}
 			case Held_Spear: {
+				Image_Handle spear = GetImageByName(&state->assets, "spear");
+				DrawQuad(batch, spear, player->p+V2(0.1*flip, 0), 0.3,(flip > 0) ? 0 : 0.35);
 				break;
 			}
 			case Held_Bucket: {
@@ -576,10 +583,15 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	SetMaskTarget(batch, RenderTarget_Default);
 	Image_Handle filter_handle = GetImageByName(&state->assets, "filter");
 	DrawQuad(batch, filter_handle, V2(0,0), 10);
+	if(play->game_over) {
+		ModeDeath(state);
+		return;
+	}
 }
 
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch, Game_State *state) {
 	f32 delta_time = input->delta_time;
+	play->survive_time += delta_time;
 	f32 gravity    = (2 * PLAYER_MAX_JUMP_HEIGHT) / (PLAYER_JUMP_APEX_TIME * PLAYER_JUMP_APEX_TIME);
 	b32 on_ground  = (player->flags&Player_OnGround);
 
@@ -740,7 +752,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
         }
 
 		if (hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)) {
-			if (hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
+			if (colliding && hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
 				hitbox->flags |= Collision_Type_Was_On_Ladder;
 				continue;
 			}
@@ -815,6 +827,15 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 		if(!colliding)
 			continue;
 		if(IsPressed(input->keys[Key_E])) {
+			//check if any items can be picked up (-1 means no)
+			s32 firstInactiveIndex = -1;
+			for(s32 j = 0; j < ArraySize(play->droppedItems); j++){
+				if(!play->droppedItems[j].active){
+					firstInactiveIndex = j;
+					break;
+				}
+			}
+
 			switch(hitbox->flags) {
 				case Collision_Type_Cannon: {
 					if(!(player->holdingFlags & Held_CannonBall)) {
@@ -844,19 +865,19 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 				case Collision_Type_Cannon_Hole:
 					break;
 				case Collision_Type_Cannon_Resource:
-					if(!(player->flags & Player_Holding)) {
+					if((!(player->flags & Player_Holding)) && firstInactiveIndex >= 0 ) {
 						player->flags|=Player_Holding;
 						player->holdingFlags|=Held_CannonBall;
 					}
 					break;
 				case Collision_Type_Plank_Resource:
-					if(!(player->flags & Player_Holding)) {
+					if(!((player->flags & Player_Holding)) && firstInactiveIndex >= 0) {
 						player->flags |= Player_Holding;
 						player->holdingFlags |= Held_Plank;
 					}
 					break;
 				case Collision_Type_Spears_Resource:
-					if(!(player->flags & Player_Holding)){
+					if((!(player->flags & Player_Holding)) && firstInactiveIndex >= 0){
 						player->flags |= Player_Holding;
 						player->holdingFlags |= Held_Spear;
 					}

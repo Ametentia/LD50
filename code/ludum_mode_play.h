@@ -184,10 +184,13 @@ struct Mode_Play {
     Playing_Sound *fix_sound;
 
     Sound_Handle hits[4];
+
+	f64 survive_time;
 };
 
 function u32 ResolveCollision(v2 posA, v2 dimA, AABB *collidable);
 function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_Batch *batch, Game_State *state);
 function void UpdateRenderWaveList(f64 dt, Draw_Batch *batch, Wave_Layer *layers, u32 layer_count);
+function void ModePlay(Game_State *state, Input *input);
 
 #endif  // PLAY_H_
