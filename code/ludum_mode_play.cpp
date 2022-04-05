@@ -704,7 +704,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
         }
 
 		if (hitbox->flags & (Collision_Type_Normal | Collision_Type_Trap_Door)) {
-			if (hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
+			if (colliding && hitbox->flags & Collision_Type_Trap_Door && player->flags & Player_On_Ladder) {
 				hitbox->flags |= Collision_Type_Was_On_Ladder;
 				continue;
 			}
