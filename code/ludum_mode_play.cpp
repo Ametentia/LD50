@@ -85,6 +85,11 @@ function void ModePlay(Game_State *state, Input *input) {
 	Initialise(&play->ship_mast_1, flag_texture, 1, 11, 1.0f / 24.0f);
 	Initialise(&play->ship_mast_2, flag_texture, 1, 11, 1.0f / 24.0f);
 
+	Initialise(&play->tentacle.animEntry, GetImageByName(&state->assets, "tentacle_wrap"), 4, 6, 1.0f / 24.0f);
+	Initialise(&play->tentacle.animDeath, GetImageByName(&state->assets, "tentacle_death"), 1, 16, 1.0f / 24.0f);
+	play->tentacle.play_tentacle_entry = 0;
+	// play->tentacleTimer = RandomF32(&play->rand, 90,120);
+	play->tentacleTimer = RandomF32(&play->rand, 4,5);
 	play->ship_mast_1.current_frame = 2;
 
 	BuildWorldHitboxes(play);
@@ -364,6 +369,33 @@ function void UpdateDroppedItems(Game_State *state, f64 dt, Draw_Batch *batch) {
 	}
 }
 
+function void UpdateTentacle(Game_State *state, Input *input){
+	Mode_Play *play = &(state->play);
+	if(play->tentacleTimer < 0 && !play->tentacle.play_tentacle_entry){
+		play->tentacle.dead = 0;
+		play->tentacle.play_tentacle_entry = 1;
+	}
+	if(play->tentacle.play_tentacle_entry){
+		UpdateAnimation(&play->tentacle.animEntry, input->delta_time);
+		u32 frames = play->tentacle.animEntry.rows * play->tentacle.animEntry.cols;
+		if(play->tentacle.animEntry.current_frame == frames) {
+			play->tentacle.animEntry.current_frame = frames-1;
+			play->tentacle.play_tentacle_entry = 0;
+		}
+	}
+	if(play->tentacle.play_tentacle_death){
+		UpdateAnimation(&play->tentacle.animDeath, input->delta_time);
+		u32 frames = play->tentacle.animDeath.rows * play->tentacle.animDeath.cols;
+		if(play->tentacle.animDeath.current_frame == frames) {
+			play->tentacle.animDeath.current_frame = 0;
+			play->tentacle.play_tentacle_entry = 0;
+			play->tentacle.play_tentacle_death = 0;
+			play->tentacle.animEntry.current_frame = 0;
+			play->tentacleTimer = RandomF32(&play->rand, 90,120);
+		}
+	}
+} 
+
 function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buffer *renderer_buffer) {
     Mode_Play *play = &(state->play);
 
@@ -372,7 +404,8 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	UpdateAnimation(&play->ship_mast_1, input->delta_time);
 	UpdateAnimation(&play->ship_mast_2, input->delta_time);
-
+	play->tentacleTimer-=input->delta_time;
+	UpdateTentacle(state, input);
     Draw_Batch _batch = {};
     Draw_Batch *batch = &_batch;
 
@@ -467,10 +500,16 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 
 	DrawAnimation(batch, &play->ship_mast_1, V3(0.2, -1,   0), V2(3, 3));
 	DrawAnimation(batch, &play->ship_mast_2, V3(2.2, -0.6, 0), V2(2, 2));
+
 	v3 cannon_pos = V3(play->hitboxes[22].pos.x, play->hitboxes[22].pos.y, (f32)0.0);
 	DrawAnimation(batch, &play->cannon_anim, cannon_pos + V3(-0.8, -0.5, 0), V2(3, 3));
 	DrawQuad(batch, cannon_stack_texture, play->hitboxes[23].pos, 0.7f);
-
+	if(!play->tentacle.play_tentacle_death){
+    	DrawAnimation(batch, &play->tentacle.animEntry, V3(-3.51,0.7,0), V2(3.55, 3.3));
+	}
+	if(play->tentacle.play_tentacle_death){		
+		DrawAnimation(batch, &play->tentacle.animDeath, V3(-3.51,0.7,0), V2(3.55, 3.3));
+	}
 #define DRAW_HITBOXES 0
 #if DRAW_HITBOXES
 	for(u32 i = 0; i < play->hitbox_count; i++){
@@ -838,6 +877,16 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
 
 			switch(hitbox->flags) {
 				case Collision_Type_Cannon: {
+					if(!play->tentacle.play_tentacle_entry && player->holdingFlags & Held_Spear){
+						player->flags&= ~Player_Holding;
+						player->holdingFlags&= ~Held_Spear;
+						play->tentacle.play_tentacle_death = 1;
+						play->tentacle.dead = 1;
+						play->tentacleTimer = RandomF32(&play->rand, 90,120);
+					}
+					if(!play->tentacle.dead){
+						break;
+					}
 					if(!(player->holdingFlags & Held_CannonBall)) {
 						break;
 					}

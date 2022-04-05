@@ -62,6 +62,15 @@ struct Enemy_Ship {
 	b32 play_dead;
 };
 
+struct Tentacle{
+	b32 play_tentacle_entry;
+	b32 play_tentacle_death;
+	u32 dead;
+	s32 heatlh;
+	Sprite_Animation animEntry;
+	Sprite_Animation animDeath;
+};
+
 enum Player_Flags {
     Player_OnGround   = (1 << 0),
     Player_DoubleJump = (1 << 1),
@@ -161,6 +170,8 @@ struct Mode_Play {
 	u32 front_wave_count;
 	Wave_Layer front_waves[3];
 	Enemy_Ship enemies[2];
+	Tentacle tentacle;
+	f32 tentacleTimer;
 	f32 time_since_enemy;
 	f32 enemy_spawn_time;
 	Random rand;

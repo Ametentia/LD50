@@ -168,7 +168,7 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 	// Right cannon
 	AddHitBox(
 		play,
-	 	V2(-2.8 ,-0.45),
+	 	V2(-3.2 ,-0.45),
 		V2(0.75, 0.7),
 		Collision_Type_Cannon
 	);
