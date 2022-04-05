@@ -25,10 +25,9 @@ function void LudumUpdateRender(Game_Context *context, Input *input, Renderer_Bu
     }
 
 	if (state->game_mode == GameMode_None) {
-		//ModeSplash(state, input);
+		ModeSplash(state, input);
 		// TEMP: Remove before release
-		ModePlay(state, input);
-		//ModeDeath(state);
+		//ModePlay(state, input);
 	}
 
 	switch (state->game_mode) {

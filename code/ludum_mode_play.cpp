@@ -57,7 +57,7 @@ function void ModePlay(Game_State *state, Input *input) {
 
     // Setup enemy ships
     //
-	play->enemy_spawn_time    = 1;
+	play->enemy_spawn_time    = 10;
 
     Image_Handle enemy_ship   = GetImageByName(&state->assets, "enemy_periscope");
 	// cannons :)
@@ -66,7 +66,7 @@ function void ModePlay(Game_State *state, Input *input) {
 
     for (u32 it = 0; it < ArraySize(play->enemies); ++it) {
         play->enemies[it].health          = 0;
-        play->enemies[it].fire_interval   = 1.0f;
+        play->enemies[it].fire_interval   = 10.0f;
         play->enemies[it].time_since_shot = 0;
         play->enemies[it].width           = 0;
 

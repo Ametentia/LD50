@@ -27,7 +27,7 @@ function void ModeDeath(Game_State *state) {
 	death->cloud_timer = play.cloud_timer;
 	death->ship_mast_1 = play.ship_mast_1;
 	death->ship_mast_2 = play.ship_mast_2;
-	death->survival = play.survival;
+	death->survival = play.survive_time;
 
     state->game_mode = GameMode_Death;
     state->death = *death;
@@ -111,8 +111,32 @@ function void UpdateRenderModeDeath(Game_State *state, Input *input, Renderer_Bu
 	if(death->angle < (-Pi32/8)*3) {
 		v2 score_pos = pos - V2(0, 5.5);
 		score_pos.y = Min(score_pos.y, 0);
-		DrawQuad(batch, GetImageByName(&state->assets, "logo"), score_pos, V2(3,1));
-		DrawQuad(batch, GetImageByName(&state->assets, "logo"), score_pos - V2(0, 0.3), V2(3,1));
-		DrawQuad(batch, GetImageByName(&state->assets, "logo"), score_pos - V2(0, 0.6), V2(3,1));
+		u32 survive_time = (u32)death->survival;
+		const char *numbers[10] = {
+			"0",
+			"1",
+			"2",
+			"3",
+			"4",
+			"5",
+			"6",
+			"7",
+			"8",
+			"9"
+		};
+		for(s32 i = 0; i < 7; i++) {
+			Image_Handle number_handle  = GetImageByName(&state->assets, numbers[survive_time%10]);
+			survive_time = survive_time/10;
+			DrawQuad(batch, number_handle, score_pos - V2((i-3)*0.5, 0.9), 0.5);
+		}
+		DrawQuad(batch, GetImageByName(&state->assets, "congratulations"), score_pos - V2(0, 1.6), 3);
+		DrawQuad(batch, GetImageByName(&state->assets, "you_survived"), score_pos - V2(0, 1.25), 2);
+		DrawQuad(batch, GetImageByName(&state->assets, "seconds"), score_pos - V2(0, 0.5), 2);
+	}
+	if(pos.y - 5.5f > 0) {
+		DrawQuad(batch, GetImageByName(&state->assets, "continue_space"), V2(0, 2), 2);
+		if(JustPressed(input->keys[Key_Space])) {
+			ModeMenu(state);
+		}
 	}
 }
