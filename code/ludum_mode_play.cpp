@@ -217,7 +217,7 @@ function void UpdateRenderEnemyShip(f64 dt, Draw_Batch *batch, Mode_Play *play, 
 		if (play->time_since_enemy > play->enemy_spawn_time && enemy->health <= 0) {
 			play->time_since_enemy = 0;
 			enemy->health = RandomU64(&(play->rand), 3, 4);
-			play->enemy_spawn_time = RandomF32(&(play->rand), 30, 40);
+			play->enemy_spawn_time = RandomF32(&(play->rand), 30, 80);
 		}
 
 		v3 pos = V3(-2.0, -1.2, 0);
@@ -394,7 +394,7 @@ function void UpdateTentacle(Game_State *state, Input *input){
 			play->tentacleTimer = RandomF32(&play->rand, 90,120);
 		}
 	}
-} 
+}
 
 function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buffer *renderer_buffer) {
     Mode_Play *play = &(state->play);
@@ -507,7 +507,7 @@ function void UpdateRenderModePlay(Game_State *state, Input *input, Renderer_Buf
 	if(!play->tentacle.play_tentacle_death){
     	DrawAnimation(batch, &play->tentacle.animEntry, V3(-3.51,0.7,0), V2(3.55, 3.3));
 	}
-	if(play->tentacle.play_tentacle_death){		
+	if(play->tentacle.play_tentacle_death){
 		DrawAnimation(batch, &play->tentacle.animDeath, V3(-3.51,0.7,0), V2(3.55, 3.3));
 	}
 #define DRAW_HITBOXES 0
@@ -692,7 +692,7 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
     // If neither left or right were pressed apply damping to the player
     //
     if (IsZero(ddp.x)) {
-        player->dp.x *= (1.0f / (1 + (PLAYER_DAMPING * delta_time)));
+        player->dp.x *= (1.0f / (1 + (movement_multiplier * PLAYER_DAMPING * delta_time)));
 		player->flags |= Player_Idle;
     }
 
@@ -725,7 +725,6 @@ function void UpdatePlayer(Mode_Play *play, Player *player, Input *input, Draw_B
             player->dp.y = term_dp;
         }
     }
-
 
     // Limit x speed
     //

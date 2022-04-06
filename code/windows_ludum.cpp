@@ -27,7 +27,7 @@ int WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR args, int show_cm
     renderer_params.max_immediate_quads = (1 << 18);
 
     renderer_params.max_texture_handles = 512;
-    renderer_params.texture_queue_size  = Megabytes(512);
+    renderer_params.texture_queue_size  = Megabytes(256);
 
     Renderer_Context *renderer = WindowsLoadRenderer(&renderer_params);
     if (!IsValid(renderer)) {
