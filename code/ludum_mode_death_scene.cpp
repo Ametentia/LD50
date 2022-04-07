@@ -34,12 +34,12 @@ function void ModeDeath(Game_State *state) {
 }
 
 function void UpdateRenderCloudsDeath(Game_State *state, Input *input, Draw_Batch *batch) {
-	Mode_Death *death = &(state->death);
+	Mode_Death *death = &state->death;
+
 	death->cloud_timer += input->delta_time;
 
-	if(death->cloud_timer > CLOUD_SLIDE_TIME) {
-		death->cloud_timer = 0;
-	}
+	if(death->cloud_timer > CLOUD_SLIDE_TIME) { death->cloud_timer = 0; }
+
 	for(s32 i = CLOUD_COUNT - 1; i > -1; i--) {
 		const char *tags[10] = {
 			"clouds_0",
@@ -86,57 +86,65 @@ function void UpdateRenderModeDeath(Game_State *state, Input *input, Renderer_Bu
 	UpdateAnimation(&death->ship_mast_2, input->delta_time);
 
     DrawClear(batch, V4(0, 0, 0, 1));
-	if(death->angle < (-Pi32/8)*3) {
-		death->height += 1.1*input->delta_time;
-	}
-	else {
-		death->height -= 1*input->delta_time;
-	}
-	f32 drop = death->height;
-	v2 pos = V2(0-sin(death->angle*2), 0.2 + drop);
+
+    f32 rotation    = 0.8f;
+    f32 height_drop = (death->angle < (-Pi32 / 8.0f) * 3.0f) ? 1.1 : -1.0;
+
+    if (IsPressed(input->keys[Key_Space]) || IsPressed(input->keys[Key_K])) {
+        rotation    = 4.0f;
+        height_drop = (death->angle < (-Pi32 / 8.0f) * 3.0f) ? 5.5 : -5.0;
+    }
+    else if (IsPressed(input->keys[Key_Esc])) {
+        death->angle  = -Pi32 / 2.0f;
+        death->height = 10.0f;
+    }
+
+    death->height += input->delta_time * height_drop; // @Todo: Clamp
+	death->angle   = Max(death->angle - rotation * input->delta_time, -Pi32 / 2.0f);
+
+	v2 pos = V2(-Sin(death->angle * 2.0f), death->height + 0.2f);
 	UpdateRenderCloudsDeath(state, input, batch);
 	UpdateRenderWaveList(input->delta_time, batch, &death->back_wave, 1);
+
     Image_Handle back_texture   = GetImageByName(&state->assets, "back_layer");
     Image_Handle middle_texture = GetImageByName(&state->assets, "middle_layer");
     Image_Handle front_texture  = GetImageByName(&state->assets, "front_layer");
-	DrawQuad(batch, back_texture,   pos, 9.3, death->angle);
-	DrawQuad(batch, middle_texture, pos, 9.3, death->angle);
-    DrawQuad(batch, front_texture, pos, 9.3, death->angle);
-	DrawAnimation(batch, &death->ship_mast_1, pos+Rotate(V2(0.2, -1.2), death->angle), V2(3, 3), death->angle);
-	DrawAnimation(batch, &death->ship_mast_2, pos+Rotate(V2(2.2, -0.8), death->angle), V2(2, 2), death->angle);
+
+	DrawQuad(batch, back_texture,   pos, 9.3f, death->angle);
+	DrawQuad(batch, middle_texture, pos, 9.3f, death->angle);
+    DrawQuad(batch, front_texture,  pos, 9.3f, death->angle);
+
+	DrawAnimation(batch, &death->ship_mast_1, pos + Rotate(V2(0.2, -1.2), death->angle), V2(3, 3), death->angle);
+	DrawAnimation(batch, &death->ship_mast_2, pos + Rotate(V2(2.2, -0.8), death->angle), V2(2, 2), death->angle);
+
 	UpdateRenderWaveList(input->delta_time, batch, death->waves, 2);
+
 	Image_Handle filter_handle = GetImageByName(&state->assets, "filter");
-	DrawQuad(batch, filter_handle, V2(0,0), 10);
-	death->angle = Max(death->angle - 0.8*input->delta_time, -Pi32/2);
-	if(death->angle < (-Pi32/8)*3) {
-		v2 score_pos = pos - V2(0, 5.5);
-		score_pos.y = Min(score_pos.y, 0);
-		u32 survive_time = (u32)death->survival;
-		const char *numbers[10] = {
-			"0",
-			"1",
-			"2",
-			"3",
-			"4",
-			"5",
-			"6",
-			"7",
-			"8",
-			"9"
-		};
-		for(s32 i = 0; i < 7; i++) {
-			Image_Handle number_handle  = GetImageByName(&state->assets, numbers[survive_time%10]);
-			survive_time = survive_time/10;
+	DrawQuad(batch, filter_handle, V2(0, 0), 10);
+
+	if (death->angle < (-Pi32 / 8.0f) * 3.0f) {
+		const char *numbers[10] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
+		u32 survive_time = cast(u32) death->survival;
+
+		v2 score_pos;
+        score_pos.x = pos.x;
+        score_pos.y = Min(pos.y - 5.5, 0);
+
+		for (s32 i = 0; i < 7; i++) {
+			Image_Handle number_handle  = GetImageByName(&state->assets, numbers[survive_time % 10]);
+			survive_time /= 10;
+
 			DrawQuad(batch, number_handle, score_pos - V2((i-3)*0.5, 0.9), 0.5);
 		}
-		DrawQuad(batch, GetImageByName(&state->assets, "congratulations"), score_pos - V2(0, 1.6), 3);
-		DrawQuad(batch, GetImageByName(&state->assets, "you_survived"), score_pos - V2(0, 1.25), 2);
-		DrawQuad(batch, GetImageByName(&state->assets, "seconds"), score_pos - V2(0, 0.5), 2);
+
+		DrawQuad(batch, GetImageByName(&state->assets, "congratulations"), score_pos - V2(0, 1.60f), 3.0f);
+		DrawQuad(batch, GetImageByName(&state->assets, "you_survived"),    score_pos - V2(0, 1.25f), 2.0f);
+		DrawQuad(batch, GetImageByName(&state->assets, "seconds"),         score_pos - V2(0, 0.50f), 2.0f);
 	}
-	if(pos.y - 5.5f > 0) {
-		DrawQuad(batch, GetImageByName(&state->assets, "continue_space"), V2(0, 2), 2);
-		if(JustPressed(input->keys[Key_Space])) {
-			ModeMenu(state);
-		}
+
+	if (pos.y - 5.5f > 0) {
+		DrawQuad(batch, GetImageByName(&state->assets, "continue_space"), V2(0, 2.0f), 2.0f);
+		if (JustPressed(input->keys[Key_Space])) { ModeMenu(state); }
 	}
 }

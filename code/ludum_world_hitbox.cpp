@@ -126,7 +126,7 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 	// bottom deck floor
 	AddHitBox(
 		play,
-	 	V2(0, 2.6),
+	 	V2(0, 2.55),
 		V2(5.6, 0.1),
 		Collision_Type_Normal
 	);
@@ -182,8 +182,8 @@ function void BuildWorldHitboxes(Mode_Play *play) {
 	// plank resource
 	AddHitBox(
 		play,
-	 	V2(2.8 , 0.2),
-		V2(0.5, 0.2),
+	 	V2(3.1,  0.12),
+		V2(0.4,  0.5),
 		Collision_Type_Plank_Resource
 	);
 	// Spears resource

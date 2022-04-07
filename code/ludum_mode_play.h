@@ -15,7 +15,10 @@
 
 // In World units / second
 //
-#define WATER_RISE_RATE_PER_HOLE (0.01f)
+#define WATER_RISE_RATE_PER_HOLE (0.015f)
+
+#define BUCKET_WATER_AMOUNT (0.20f)
+
 // Movement
 //
 #define PLAYER_MOVE_SPEED (8)
@@ -33,7 +36,7 @@
 
 // In elementry units
 //
-#define MAX_SHIP_HOLES (10)
+#define MAX_SHIP_HOLES (15)
 #define CLOUD_COUNT    (10)
 
 enum Ship_Layer {
@@ -138,6 +141,8 @@ struct Game_State;
 struct Player{
 	Sprite_Animation anim;
 
+    f32 mask_radius;
+
 	u32 flags;
 	u32 holdingFlags;
     f32 last_jump_time;
@@ -166,6 +171,7 @@ struct Mode_Play {
 	f32 water_level;
     f32 target_water_level;
     f32 water_dir;
+    f32 water_rate_multiplier;
 
 	u32 front_wave_count;
 	Wave_Layer front_waves[3];
